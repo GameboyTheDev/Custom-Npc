@@ -1,0 +1,11 @@
+{
+  "name": "Custom-Npc",
+  "tree": {
+    "$className": "DataModel",
+    "ServerStorage": {
+      "Custom-Npc": {
+        "$path": "src/ServerStorage/Custom-Npc"
+      }
+    }
+  }
+}
