@@ -24,12 +24,13 @@ local bar = main.Bar
 local editFrame: Frame = main.Edit
 local npcView: ViewportFrame = editFrame.NpcView
 local designFrame: Frame = editFrame.Design
+local animationsFrame: Frame = editFrame.Animations
 local npcsList: ScrollingFrame = menu.NpcsList.List
 
 function barScripts:newNpcButton()
 	bar.CreateButton.MouseButton1Click:Connect(function()
 		if not editFrame.Visible and not background:FindFirstChild("chooseCharacterTypeClone") then
-			local characterData = {Clothing = {}}
+			local characterData = { Clothing = {} }
 
 			-- local rigType = popup:rigTypePopup()
 
@@ -56,7 +57,7 @@ end
 function barScripts:saveButton()
 	bar.SaveButton.MouseButton1Click:Connect(function()
 		if editFrame.Visible and not background:FindFirstChild("popupFrameClone") then
-            local data = getData:Invoke()
+			local data = getData:Invoke()
 
 			-- Gets the newCharacterName and compiles the clothing pieces of the newCharacter in a table
 			local newCharacterName, newCharacter = editModule.compileCharacter(self)
@@ -67,7 +68,7 @@ function barScripts:saveButton()
 			end
 
 			--print("Picked up from compile: ", newCharacter)
-			
+
 			if data then
 				local npcsListChildrenAmount = #npcsList:GetChildren()
 
@@ -109,23 +110,16 @@ function barScripts:saveButton()
 	end)
 end
 
-local designButtonConnection: RBXScriptConnection
+local editFrameConnections = {}
 
 function barScripts:designButton(savedCharacterData)
-	designButtonConnection = bar.DesignButton.MouseButton1Click:Connect(function()
+	editFrameConnections["designButtonConnection"] = bar.DesignButton.MouseButton1Click:Connect(function()
 		if designFrame.Visible then
 			editModule:cleanUpDesign()
 		else
 			editModule:design(savedCharacterData)
 		end
 	end)
-end
-
-function barScripts:cleanUpDesignButton()
-	if designButtonConnection then
-		designButtonConnection:Disconnect()
-		designButtonConnection = nil
-	end
 end
 
 function barScripts:uploadCharacterButton()
@@ -142,17 +136,42 @@ function barScripts:uploadCharacterButton()
 			clonedNpc.Name = "ClonedNpc"
 			clonedNpc.Parent = workspace
 
-			Selection:Set({clonedNpc})
+			Selection:Set({ clonedNpc })
 
 			print("Loaded npc in workspace")
 		end
 	end)
 end
 
+function barScripts:animationButton(savedCharacterData)
+	editFrameConnections["animationButton"] = bar.AnimationButton.MouseButton1Click:Connect(function() 
+		if not animationsFrame.Visible then
+			print("Showing...")
+
+			editModule:animationFrame(savedCharacterData)
+
+			animationsFrame.Visible = true			
+		else
+			animationsFrame.Visible = false
+		end
+	end)
+end
+
+function barScripts:cleanUpEditFrame()
+	for _, connection: RBXScriptConnection in pairs(editFrameConnections) do
+		connection:Disconnect()
+	end
+end
+
+function barScripts:initEditFrameButtons(savedCharacterData)
+	barScripts:animationButton(savedCharacterData)
+	barScripts:designButton(savedCharacterData)
+end
+
 --Args: self: plugin
 function barScripts:Init()
-    barScripts:newNpcButton()
-    barScripts.saveButton(self)
+	barScripts:newNpcButton()
+	barScripts.saveButton(self)
 	barScripts:uploadCharacterButton()
 end
 

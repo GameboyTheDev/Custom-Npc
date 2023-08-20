@@ -1,3 +1,4 @@
+local AssetService = game:GetService("AssetService")
 local InsertService = game:GetService("InsertService")
 local MarketplaceService = game:GetService("MarketplaceService")
 local RunService = game:GetService("RunService")
@@ -5,6 +6,7 @@ local RunService = game:GetService("RunService")
 local edit = {}
 
 local assets: Folder = script.Parent.Parent.Assets
+local animationPackTemplate: Frame = assets.AnimationPackTemplate
 local clothingPieceTemplate: GuiButton = assets.ClothingPieceTemplate
 local background: Frame = assets.Background
 
@@ -16,6 +18,7 @@ local npcViewFrame: ViewportFrame = editFrame.NpcView
 local npcViewTitle: TextLabel = editFrame.NpcViewTitle
 local faceIdBox: TextBox = editFrame.FaceIdBox
 local design: Frame = editFrame.Design
+local animations: Frame = editFrame.Animations
 
 local currentNpcMovement = nil
 
@@ -179,7 +182,10 @@ function edit:npcView(savedCharacterData, viewFrame: ViewportFrame)
 	currentNpcMovement = RunService:BindToRenderStep("UpdateCamera", Enum.RenderPriority.Camera.Value + 1, UpdateCamera)
 
 	viewFrame.Visible = true
+	print(viewFrame.Visible)
 	loading = false
+
+	return rig
 end
 
 function cleanUpNpcView()
@@ -193,8 +199,8 @@ function cleanUpNpcView()
 end
 
 -- This gets all of the instances the npc is wearing and compiles it into a table
---Args: self: plugin
-function edit:compileCharacter()
+--Args: self: plugin (Only needed if editName is false)
+function edit:compileCharacter(editName)
 	local npc: Model = npcViewFrame:FindFirstChildOfClass("Model")
 	local characterData = { Clothing = {} }
 	local characterName
@@ -212,7 +218,9 @@ function edit:compileCharacter()
 		end
 	end
 
-	characterName = require(script.Parent.popup).editNamePopup(self, true, nil, characterData)
+	if not editName then
+		characterName = require(script.Parent.popup).editNamePopup(self, true, nil, characterData)		
+	end
 
 	characterData.RigType = npc.Name
 
@@ -458,10 +466,108 @@ function edit:cleanUpDesign()
 	--print("Design cleaned")
 end
 
+local animationPackIds = {
+	356,
+	56,
+	82,
+	667,
+	43,
+	75,
+	80,
+	81,
+	83,
+	63,
+	32,
+	48,
+	34,
+	79,
+	68,
+	33,
+	55,
+	39,
+}
+
+local stop = false
+
+function edit:animationFrame()
+	--print(game:GetService("AssetService"):GetBundleDetailsAsync(356))
+
+	print("Picked up")
+
+	local savedCharacterData = edit:compileCharacter(true)
+
+	stop = false
+
+	for _, id in ipairs(animationPackIds) do
+		local success, assetInfo = pcall(function()
+			return AssetService:GetBundleDetailsAsync(id)
+		end)
+
+		if not success then
+			warn("CUSTOM NPC ERROR: "..assetInfo)
+		end
+
+		print(assetInfo)
+
+		local animationPackFrame: Frame = animationPackTemplate:Clone()
+		local viewFrame: ViewportFrame = animationPackFrame.viewFrame
+
+		animationPackFrame.Parent = animations
+
+		animationPackFrame.Title.Text = assetInfo.Name
+
+		local rig = edit:npcView(savedCharacterData, viewFrame)
+		local humanoid: Humanoid = rig.Humanoid
+
+		local animationsFound = assetInfo.Items
+
+		print(rig)
+
+		task.spawn(function()
+			-- while true do
+			-- 	if stop then
+			-- 		break
+			-- 	end
+				for _, animationFound in pairs(animationsFound) do
+					if stop then
+						break
+					end
+
+					print(animationFound)
+
+					local animation = Instance.new("Animation")
+					--http://www.roblox.com/asset/?id=
+					animation.AnimationId = "rbxassetid://"..animationFound.Id
+					animation.Parent = workspace
+	
+					local track = humanoid:FindFirstChildOfClass("Animator"):LoadAnimation(animation)
+					track:Play()
+	
+					task.wait(2.5)
+	
+					track:Stop()
+					track.Stopped:Wait()
+					animation:Destroy()
+				end
+			--end
+		end)
+	end
+end
+
+function edit:cleanUpAnimationFrame()
+	stop = true
+
+	for _, frame: Frame in pairs(animations:GetChildren()) do
+		if frame:IsA("Frame") then
+			frame:Destroy()
+		end
+	end
+end
+
 -- Opens the edit frame to edit a character
 function edit.new(savedCharacterName, savedCharacterData)
-	require(script.Parent.barScripts):designButton(savedCharacterData)
-	
+	require(script.Parent.barScripts):initEditFrameButtons(savedCharacterData)
+
 	editFrame.Visible = true
 
 	edit:npcView(savedCharacterData, npcViewFrame)
@@ -469,9 +575,7 @@ end
 
 -- Cleans up the edit frame (Cleans up connections etc.)
 function edit:cleanUp()
-	require(script.Parent.barScripts):cleanUpDesignButton()
-
-	edit:cleanUpDesign()
+	require(script.Parent.barScripts):cleanUpEditFrame()
 
 	cleanUpNpcView()
 
