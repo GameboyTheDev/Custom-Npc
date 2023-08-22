@@ -144,7 +144,7 @@ function edit:npcView(savedCharacterData, viewFrame: ViewportFrame)
 	local rigType = savedCharacterData.RigType
 
 	local rig = assets:FindFirstChild(rigType):Clone() -- Clones a new rig
-	rig.Parent = viewFrame:FindFirstChildOfClass("WorldModel")
+	rig.Parent = viewFrame
 
 	local angle = 10 -- current rotation angle
 	local speed = 1 -- How long it takes to do a full cycle
@@ -174,8 +174,8 @@ function edit:npcView(savedCharacterData, viewFrame: ViewportFrame)
 end
 
 function cleanUpNpcView()
-	for _, v in pairs(npcViewFrame:GetDescendants()) do
-		if not v:IsA("UICorner") and not v:IsA("WorldModel") then
+	for _, v in pairs(npcViewFrame:GetChildren()) do
+		if not v:IsA("UICorner") then
 			v:Destroy()
 		end
 	end
