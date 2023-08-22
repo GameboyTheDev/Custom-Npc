@@ -17,7 +17,7 @@ local main = background.Main
 local editFrame = main.Edit
 
 local npcViewFrame: ViewportFrame = editFrame.NpcView
-local npcViewFrameModel: WorldModel = npcViewFrame:FindFirstChildOfClass("WorldModel")
+--local npcViewFrameModel: WorldModel = npcViewFrame:FindFirstChildOfClass("WorldModel")
 local npcViewTitle: TextLabel = editFrame.NpcViewTitle
 local faceIdBox: TextBox = editFrame.FaceIdBox
 local design: Frame = editFrame.Design
@@ -51,7 +51,7 @@ local function equipFace(npc, inputtedId)
 end
 
 function edit:updateNpcViewClothing(savedCharacterData)
-	local npc = npcViewFrameModel:FindFirstChildOfClass("Model")
+	local npc = npcViewFrame:FindFirstChildOfClass("Model")
 
 	for _, data in pairs(savedCharacterData.Clothing) do
 		if data.Type then
@@ -90,7 +90,7 @@ function edit:updateNpcViewClothing(savedCharacterData)
 
 				task.wait(1)
 
-				newNpc.Parent = npcViewFrameModel
+				newNpc.Parent = npcViewFrame
 
 				npc:Destroy()
 
@@ -186,7 +186,7 @@ end
 -- This gets all of the instances the npc is wearing and compiles it into a table
 --Args: self: plugin (Only needed if editName is false)
 function edit:compileCharacter(editName)
-	local npc: Model = npcViewFrameModel:FindFirstChildOfClass("Model")
+	local npc: Model = npcViewFrame:FindFirstChildOfClass("Model")
 	local characterData = { Clothing = {} }
 	local characterName
 
@@ -226,7 +226,7 @@ local designConnections = {}
 
 -- This initiates the design frame
 function edit:design(savedCharacterData)
-	local npc: Model = npcViewFrameModel:FindFirstChildOfClass("Model")
+	local npc: Model = npcViewFrame:FindFirstChildOfClass("Model")
 
 	-- Here we are setting the design frames buttons up
 	for _, clothingFrame: Frame in pairs(design:GetChildren()) do
@@ -380,7 +380,7 @@ function edit:design(savedCharacterData)
 
 					task.wait(1) -- Small delay so that the accessory can be fully put on the npc
 
-					newNpc.Parent = npcViewFrameModel -- Putting it back in the viewportframe
+					newNpc.Parent = npcViewFrame -- Putting it back in the viewportframe
 
 					-- Destroying the npc and setting the new npc to one we cloned above
 					npc:Destroy()

@@ -23,7 +23,7 @@ local bar = main.Bar
 
 local editFrame: Frame = main.Edit
 local npcView: ViewportFrame = editFrame.NpcView
-local npcViewModel: WorldModel = npcView:FindFirstChildOfClass("WorldModel")
+--local npcViewFrame : WorldModel = npcView:FindFirstChildOfClass("WorldModel")
 local designFrame: Frame = editFrame.Design
 local animationsFrame: Frame = editFrame.Animations
 local npcsList: ScrollingFrame = menu.NpcsList.List
@@ -126,7 +126,7 @@ end
 function barScripts:uploadCharacterButton()
 	bar.UploadButton.MouseButton1Click:Connect(function()
 		if editFrame.Visible then
-			local npc: Model = npcViewModel:FindFirstChildOfClass("Model")
+			local npc: Model = npcView:FindFirstChildOfClass("Model")
 
 			if not npc then
 				warn("CUSTOM NPC ERROR: Npc not found in ViewportFrame")
