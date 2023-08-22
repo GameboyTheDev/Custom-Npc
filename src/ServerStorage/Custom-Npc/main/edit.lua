@@ -6,6 +6,8 @@ local RunService = game:GetService("RunService")
 local edit = {}
 
 local assets: Folder = script.Parent.Parent.Assets
+
+--local playAnim: RemoteFunction = assets.playAnim
 local animationPackTemplate: Frame = assets.AnimationPackTemplate
 local clothingPieceTemplate: GuiButton = assets.ClothingPieceTemplate
 local background: Frame = assets.Background
@@ -15,6 +17,7 @@ local main = background.Main
 local editFrame = main.Edit
 
 local npcViewFrame: ViewportFrame = editFrame.NpcView
+local npcViewFrameModel: WorldModel = npcViewFrame:FindFirstChildOfClass("WorldModel")
 local npcViewTitle: TextLabel = editFrame.NpcViewTitle
 local faceIdBox: TextBox = editFrame.FaceIdBox
 local design: Frame = editFrame.Design
@@ -48,7 +51,7 @@ local function equipFace(npc, inputtedId)
 end
 
 function edit:updateNpcViewClothing(savedCharacterData)
-	local npc = npcViewFrame:FindFirstChildOfClass("Model")
+	local npc = npcViewFrameModel:FindFirstChildOfClass("Model")
 
 	for _, data in pairs(savedCharacterData.Clothing) do
 		if data.Type then
@@ -61,6 +64,7 @@ function edit:updateNpcViewClothing(savedCharacterData)
 				pants.PantsTemplate = data.PantsId
 				pants.Parent = npc
 			elseif data.Type == "Face" then
+				--print(data)
 				equipFace(npc, data.Texture)
 			elseif data.Type == "Accessory" then
 				-- Loads the accessory in via InsertService
@@ -86,7 +90,7 @@ function edit:updateNpcViewClothing(savedCharacterData)
 
 				task.wait(1)
 
-				newNpc.Parent = npcViewFrame
+				newNpc.Parent = npcViewFrameModel
 
 				npc:Destroy()
 
@@ -139,17 +143,8 @@ function edit:npcView(savedCharacterData, viewFrame: ViewportFrame)
 
 	local rigType = savedCharacterData.RigType
 
-	-- if not rigType then
-	-- 	for _, v in pairs(savedCharacterData) do
-	-- 		if v.RigType then
-	-- 			rigType = v.RigType
-	-- 			break
-	-- 		end
-	-- 	end
-	-- end
-
 	local rig = assets:FindFirstChild(rigType):Clone() -- Clones a new rig
-	rig.Parent = viewFrame
+	rig.Parent = viewFrame:FindFirstChildOfClass("WorldModel")
 
 	local angle = 10 -- current rotation angle
 	local speed = 1 -- How long it takes to do a full cycle
@@ -166,15 +161,6 @@ function edit:npcView(savedCharacterData, viewFrame: ViewportFrame)
 	viewFrame.CurrentCamera = camera -- Connects the camera to the viewportframe
 
 	local function UpdateCamera(timeSinceLastFrame)
-		-- local _, m = pcall(function()
-		-- 	angle += timeSinceLastFrame * speed -- Sets the angle
-		-- 	camera.CFrame = CFrame.Angles(0, angle, 0) * CFrame.new(0, -0.2, distance) + center -- Sets the cframe
-		-- end)
-
-		-- if m then
-		-- 	warn("CUSTOM NPC ERROR: "..m)
-		-- end
-
 		angle += timeSinceLastFrame * speed -- Sets the angle
 		camera.CFrame = CFrame.Angles(0, angle, 0) * CFrame.new(0, -0.2, distance) + center -- Sets the cframe
 	end
@@ -182,15 +168,14 @@ function edit:npcView(savedCharacterData, viewFrame: ViewportFrame)
 	currentNpcMovement = RunService:BindToRenderStep("UpdateCamera", Enum.RenderPriority.Camera.Value + 1, UpdateCamera)
 
 	viewFrame.Visible = true
-	print(viewFrame.Visible)
 	loading = false
 
 	return rig
 end
 
 function cleanUpNpcView()
-	for _, v in pairs(npcViewFrame:GetChildren()) do
-		if not v:IsA("UICorner") then
+	for _, v in pairs(npcViewFrame:GetDescendants()) do
+		if not v:IsA("UICorner") and not v:IsA("WorldModel") then
 			v:Destroy()
 		end
 	end
@@ -201,7 +186,7 @@ end
 -- This gets all of the instances the npc is wearing and compiles it into a table
 --Args: self: plugin (Only needed if editName is false)
 function edit:compileCharacter(editName)
-	local npc: Model = npcViewFrame:FindFirstChildOfClass("Model")
+	local npc: Model = npcViewFrameModel:FindFirstChildOfClass("Model")
 	local characterData = { Clothing = {} }
 	local characterName
 
@@ -213,13 +198,19 @@ function edit:compileCharacter(editName)
 		elseif v:IsA("Accessory") then
 			table.insert(characterData.Clothing, { Type = "Accessory", AssetId = v:GetAttribute("AssetId") })
 		elseif v:IsA("Decal") and v.Parent == npc.Head then
-			local split = string.split(v.Texture, "id=") -- Because we are grabbing the decal's texture which doesn't return just the id
-			table.insert(characterData.Clothing, { Type = "Face", Texture = split[2] })
+			local texture = v.Texture
+
+			if string.find(texture, "id=") then
+				-- Because we are grabbing the decal's texture which doesn't return just the id
+				texture = string.split(v.Texture, "id=")[2]
+			end
+
+			table.insert(characterData.Clothing, { Type = "Face", Texture = texture })
 		end
 	end
 
 	if not editName then
-		characterName = require(script.Parent.popup).editNamePopup(self, true, nil, characterData)		
+		characterName = require(script.Parent.popup).editNamePopup(self, true, nil, characterData)
 	end
 
 	characterData.RigType = npc.Name
@@ -235,7 +226,7 @@ local designConnections = {}
 
 -- This initiates the design frame
 function edit:design(savedCharacterData)
-	local npc: Model = npcViewFrame:FindFirstChildOfClass("Model")
+	local npc: Model = npcViewFrameModel:FindFirstChildOfClass("Model")
 
 	-- Here we are setting the design frames buttons up
 	for _, clothingFrame: Frame in pairs(design:GetChildren()) do
@@ -389,7 +380,7 @@ function edit:design(savedCharacterData)
 
 					task.wait(1) -- Small delay so that the accessory can be fully put on the npc
 
-					newNpc.Parent = npcViewFrame -- Putting it back in the viewportframe
+					newNpc.Parent = npcViewFrameModel -- Putting it back in the viewportframe
 
 					-- Destroying the npc and setting the new npc to one we cloned above
 					npc:Destroy()
@@ -494,7 +485,9 @@ function edit:animationFrame()
 
 	print("Picked up")
 
-	local savedCharacterData = edit:compileCharacter(true)
+	local _, savedCharacterData = edit.compileCharacter(nil, true)
+
+	print(savedCharacterData)
 
 	stop = false
 
@@ -504,53 +497,62 @@ function edit:animationFrame()
 		end)
 
 		if not success then
-			warn("CUSTOM NPC ERROR: "..assetInfo)
+			warn("CUSTOM NPC ERROR: " .. assetInfo)
 		end
 
 		print(assetInfo)
 
 		local animationPackFrame: Frame = animationPackTemplate:Clone()
-		local viewFrame: ViewportFrame = animationPackFrame.viewFrame
+		local animationPackImage: ImageLabel = animationPackFrame.AssetImage
+
+		animationPackImage.Image = "rbxthumb://type=Asset&id="..assetInfo.Id.."&w=420&h=420"
 
 		animationPackFrame.Parent = animations
 
 		animationPackFrame.Title.Text = assetInfo.Name
 
+		--[[
 		local rig = edit:npcView(savedCharacterData, viewFrame)
 		local humanoid: Humanoid = rig.Humanoid
+		local animator: Animator = humanoid.Animator
 
 		local animationsFound = assetInfo.Items
-
-		print(rig)
 
 		task.spawn(function()
 			-- while true do
 			-- 	if stop then
 			-- 		break
 			-- 	end
-				for _, animationFound in pairs(animationsFound) do
-					if stop then
-						break
-					end
 
-					print(animationFound)
-
-					local animation = Instance.new("Animation")
-					--http://www.roblox.com/asset/?id=
-					animation.AnimationId = "rbxassetid://"..animationFound.Id
-					animation.Parent = workspace
-	
-					local track = humanoid:FindFirstChildOfClass("Animator"):LoadAnimation(animation)
-					track:Play()
-	
-					task.wait(2.5)
-	
-					track:Stop()
-					track.Stopped:Wait()
-					animation:Destroy()
+			for _, animationFound in pairs(animationsFound) do
+				if stop then
+					break
 				end
+
+				--print(animationFound)
+
+				local animation = Instance.new("Animation")
+				--http://www.roblox.com/asset/?id=
+				animation.AnimationId = "http://www.roblox.com/asset/?id=" .. animationFound.Id
+				animation.Parent = workspace
+
+				print(animation)
+
+				local track: AnimationTrack = animator:LoadAnimation(animation)
+
+				track.Looped = true
+				track.Priority = Enum.AnimationPriority.Action4
+
+				track:Play()
+
+				task.wait(3)
+
+				track:Stop()
+				animation:Destroy()
+			end
 			--end
 		end)
+		--]]
 	end
 end
 
