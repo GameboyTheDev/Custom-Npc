@@ -2,7 +2,7 @@ local TweenService = game:GetService("TweenService")
 
 local toolbar: PluginToolbar = plugin:CreateToolbar("Custom-Npc")
 local mainButton: PluginToolbarButton =
-	toolbar:CreateButton("MainButton", "Customize your npcs", "rbxassetid://13089516202", "Customize")
+	toolbar:CreateButton("MainButton", "Customize your npcs", "rbxassetid://14534329195", "Customize")
 
 -- The plugin widget (The UI the user interacts with)
 local widget = plugin:CreateDockWidgetPluginGui(
@@ -23,14 +23,16 @@ local data
 local dataKey = "PluginDataTest9"
 
 local assets = script.Parent.Assets
+local events = assets.Events
+local ui = assets.UI
 
-local getDataKey: BindableFunction = assets.getDataKey
-local getData: BindableFunction = assets.getData
-local loadDataEvent: BindableEvent = assets.loadData
+local setData: BindableEvent = events.setData
+local getData: BindableFunction = events.getData
+local loadDataEvent: BindableEvent = events.loadData
 
-local savedCharacterTemplate: Frame = assets.SavedCharacterTemplate
+local savedCharacterTemplate: Frame = ui.SavedCharacterTemplate
 
-local background: Frame = assets.Background
+local background: Frame = ui.Background
 
 local main: Frame = background.Main
 local menu: Frame = background.Menu
@@ -38,13 +40,21 @@ local menu: Frame = background.Menu
 local editFrame: Frame = main.Edit
 local npcsList: ScrollingFrame = menu.NpcsList.List
 
-getDataKey.OnInvoke = function()
-	return dataKey
-end
-
 getData.OnInvoke = function()
 	return data
 end
+
+setData.Event:Connect(function(newData)
+	-- if newData["TEMPDATA"] then
+	-- 	newData["TEMPDATA"] = nil
+	-- end
+
+	plugin:SetSetting(dataKey, newData)
+
+	data = newData
+
+	print("setData event: ", data)
+end)
 
 local barScripts = require(script.barScripts)
 local popup = require(script.popup)
@@ -79,6 +89,7 @@ function loadData()
 	for savedCharacterName, savedCharacterData in pairs(data) do
 		print(savedCharacterName, savedCharacterData)
 
+		--if savedCharacterName ~= "TEMPDATA" then
 		local savedCharacterFrame = savedCharacterTemplate:Clone()
 
 		local loadCharacter: GuiButton = savedCharacterFrame.LoadCharacter
@@ -152,7 +163,9 @@ function loadData()
 			end
 		end)
 		--print("Done setting up", savedCharacterName)
+		--end
 	end
+
 	--print("Data loaded")
 end
 
@@ -166,6 +179,16 @@ mainButton.Click:Connect(function()
 	isOpen = not isOpen
 
 	if isOpen then
+		local newData = data
+
+		if newData["TEMPDATA"] then
+			newData["TEMPDATA"] = nil
+		end
+
+		plugin:SetSetting(dataKey, newData)
+
+		data = newData
+		
 		widget.Enabled = false
 	else
 		widget.Enabled = true

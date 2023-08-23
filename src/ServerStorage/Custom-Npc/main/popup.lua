@@ -5,15 +5,17 @@ local edit = require(script.Parent.edit)
 local popup = {}
 
 local assets: Folder = script.Parent.Parent.Assets
-local background: Frame = assets.Background
+local events = assets.Events
+local ui = assets.UI
+
+local setData: BindableEvent = events.setData
+local getData: BindableFunction = events.getData
+local loadData: BindableEvent = events.loadData
+
+local background: Frame = ui.Background
 
 local popupFrameClone = background.PopupFrame
 local chooseCharacterTypeLocation: Frame = background.ChooseCharacterType
-
-local getData: BindableFunction = assets.getData
-local loadData: BindableEvent = assets.loadData
-
-local dataKey = assets.getDataKey:Invoke()
 
 -- Cleans up the popup frame
 local function cleanUpPopupFrame(popupFrame, connections)
@@ -31,49 +33,51 @@ function popup:rigTypePopup()
 	local chooseCharacterType = chooseCharacterTypeLocation:Clone()
 	local cancel: GuiButton = chooseCharacterType.Cancel
 
-	local r6Button: GuiButton = chooseCharacterType["R6Button"]
-	local r15Button: GuiButton = chooseCharacterType["R15Button"]
+	-- local r6Button: GuiButton = chooseCharacterType.ActivateButton
+	-- local r15Button: GuiButton = chooseCharacterType.ActivateButton
 
 	local chosenRigType = ""
 	local stop = false
 
 	local viewFrames = { chooseCharacterType["R6"], chooseCharacterType["R15"] }
 
-	for _, viewFrame in pairs(viewFrames) do
-		local viewPortFrame: ViewportFrame = viewFrame.ViewportFrame
-		edit:npcView({ Clothing = {}, RigType = viewFrame:GetAttribute("RigType") }, viewPortFrame)
+	local function getGoal(instance, color)
+		if instance:IsA("TextButton") then
+			return { TextColor3 = color }
+		else
+			return { BackgroundColor3 = color }
+		end
 	end
 
 	local function mouseEnter(button, color)
 		connections[button.Name .. "HoverStart"] = button.MouseEnter:Connect(function()
-			TweenService:Create(button, TweenInfo.new(0.25), { TextColor3 = color }):Play()
+			TweenService:Create(button, TweenInfo.new(0.25), getGoal(button, color)):Play()
 		end)
 	end
 
-	local function mouseLeave(button)
+	local function mouseLeave(button, color)
 		connections[button.Name .. "HoverEnd"] = button.MouseLeave:Connect(function()
-			TweenService:Create(button, TweenInfo.new(0.25), { TextColor3 = Color3.fromRGB(255, 255, 255) }):Play()
+			TweenService:Create(button, TweenInfo.new(0.25), getGoal(button, color)):Play()
 		end)
 	end
 
-	mouseEnter(r6Button, Color3.fromRGB(252, 168, 0))
-	mouseLeave(r6Button)
+	for _, viewFrame in pairs(viewFrames) do
+		local viewPortFrame: ViewportFrame = viewFrame.ViewportFrame
+		local activateButton: GuiButton = viewFrame.ActivateButton
 
-	connections["R6ButtonClick"] = r6Button.MouseButton1Click:Connect(function()
-		chosenRigType = "R6"
-		stop = true
-	end)
+		edit:npcView({ Clothing = {}, RigType = viewFrame:GetAttribute("RigType") }, viewPortFrame)
 
-	mouseEnter(r15Button, Color3.fromRGB(252, 168, 0))
-	mouseLeave(r15Button)
+		mouseEnter(viewFrame, Color3.fromRGB(252, 168, 0))
+		mouseLeave(viewFrame, Color3.fromRGB(62,62,62))
 
-	connections["R15ButtonClick"] = r15Button.MouseButton1Click:Connect(function()
-		chosenRigType = "R15"
-		stop = true
-	end)
+		connections["R6ButtonClick"] = activateButton.MouseButton1Click:Connect(function()
+			chosenRigType = viewFrame.Name
+			stop = true
+		end)
+	end
 
 	mouseEnter(cancel, Color3.fromRGB(255, 0, 0))
-	mouseLeave(cancel)
+	mouseLeave(cancel, Color3.fromRGB(255,255,255))
 
 	connections["cancelButtonClick"] = cancel.MouseButton1Click:Connect(function()
 		chosenRigType = ""
@@ -115,21 +119,23 @@ function popup:editNamePopup(isNewName, oldSavedCharacterName, savedCharacterDat
 
 	popupFrame.Parent = background
 
-	connections["confirmButtonHoverStart"] = confirm.MouseEnter:Connect(function()
-		TweenService:Create(confirm, TweenInfo.new(0.25), { TextColor3 = Color3.fromRGB(85, 255, 0) }):Play()
-	end)
+	local function mouseEnter(button: GuiButton, color: Color3)
+		connections[button.Name .. "HoverStart"] = button.MouseEnter:Connect(function()
+			TweenService:Create(confirm, TweenInfo.new(0.25), { TextColor3 = color }):Play()
+		end)
+	end
 
-	connections["confirmButtonHoverEnd"] = confirm.MouseLeave:Connect(function()
-		TweenService:Create(confirm, TweenInfo.new(0.25), { TextColor3 = Color3.fromRGB(255, 255, 255) }):Play()
-	end)
+	local function mouseLeave(button: GuiButton)
+		connections[button.Name .. "HoverEnd"] = button.MouseLeave:Connect(function()
+			TweenService:Create(cancel, TweenInfo.new(0.25), { TextColor3 = Color3.fromRGB(255, 255, 255) }):Play()
+		end)
+	end
 
-	connections["cancelButtonHoverStart"] = cancel.MouseEnter:Connect(function()
-		TweenService:Create(cancel, TweenInfo.new(0.25), { TextColor3 = Color3.fromRGB(255, 0, 0) }):Play()
-	end)
+	mouseEnter(confirm, Color3.fromRGB(85, 255, 0))
+	mouseLeave(confirm)
 
-	connections["cancelButtonHoverEnd"] = cancel.MouseLeave:Connect(function()
-		TweenService:Create(cancel, TweenInfo.new(0.25), { TextColor3 = Color3.fromRGB(255, 255, 255) }):Play()
-	end)
+	mouseEnter(cancel, Color3.fromRGB(255, 0, 0))
+	mouseLeave(cancel)
 
 	if not isNewName then
 		connections["confirmButton"] = confirm.MouseButton1Click:Connect(function()
@@ -142,7 +148,8 @@ function popup:editNamePopup(isNewName, oldSavedCharacterName, savedCharacterDat
 			data[editNameTextBox.Text] = savedCharacterData
 
 			-- Sets the new data in the plugin
-			self:SetSetting(dataKey, data)
+			--self:SetSetting(dataKey, data)
+			setData:Fire(data)
 
 			cleanUpPopupFrame(popupFrame, connections)
 
@@ -233,7 +240,8 @@ function popup:deleteSavedCharacter(savedCharacterName)
 		data[savedCharacterName] = nil -- Removes the savedCharacter from the data table
 
 		-- Sets the new data in the plugin
-		self:SetSetting(dataKey, data)
+		--self:SetSetting(dataKey, data)
+		setData:Fire(data)
 
 		-- Cleans up the popup frame
 		cleanUpPopupFrame(popupFrame, connections)

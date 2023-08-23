@@ -1,16 +1,22 @@
 local AssetService = game:GetService("AssetService")
 local InsertService = game:GetService("InsertService")
+local TweenService = game:GetService("TweenService")
 local MarketplaceService = game:GetService("MarketplaceService")
 local RunService = game:GetService("RunService")
 
 local edit = {}
 
 local assets: Folder = script.Parent.Parent.Assets
+local ui = assets.UI
+local events = assets.Events
 
+local setData: BindableEvent = events.setData
 --local playAnim: RemoteFunction = assets.playAnim
-local animationPackTemplate: Frame = assets.AnimationPackTemplate
-local clothingPieceTemplate: GuiButton = assets.ClothingPieceTemplate
-local background: Frame = assets.Background
+local getData: BindableFunction = events.getData
+
+local animationPackTemplate: Frame = ui.AnimationPackTemplate
+local clothingPieceTemplate: GuiButton = ui.ClothingPieceTemplate
+local background: Frame = ui.Background
 
 local main = background.Main
 
@@ -19,6 +25,7 @@ local editFrame = main.Edit
 local npcViewFrame: ViewportFrame = editFrame.NpcView
 --local npcViewFrameModel: WorldModel = npcViewFrame:FindFirstChildOfClass("WorldModel")
 local npcViewTitle: TextLabel = editFrame.NpcViewTitle
+local selectedAnimPackLabel: TextLabel = editFrame.SelectedAnimPack
 local faceIdBox: TextBox = editFrame.FaceIdBox
 local design: Frame = editFrame.Design
 local animations: Frame = editFrame.Animations
@@ -32,6 +39,24 @@ local function equipFace(npc, inputtedId)
 
 	if string.find(id, "id=") then
 		id = string.split(id, "id=")[2]
+	end
+
+	if id == "" or id == "rbxasset://textures/face.png" then
+		return
+	end
+
+	local _, message = pcall(function()
+		local info = MarketplaceService:GetProductInfo(tonumber(id))
+
+		if info.AssetTypeId ~= 13 then
+			error("Only decal ids are allowed.")
+			return
+		end
+	end)
+
+	if message then
+		warn("CUSTOM NPC ERROR: " .. message)
+		return
 	end
 
 	local start = "rbxthumb://type=Asset&w=768&h=432&id="
@@ -50,8 +75,8 @@ local function equipFace(npc, inputtedId)
 	decal.Parent = npc.Head
 end
 
-function edit:updateNpcViewClothing(savedCharacterData)
-	local npc = npcViewFrame:FindFirstChildOfClass("Model")
+function edit:updateNpcClothing(savedCharacterData, npc)
+	--local npc = npcViewFrame:FindFirstChildOfClass("Model")
 
 	for _, data in pairs(savedCharacterData.Clothing) do
 		if data.Type then
@@ -81,6 +106,8 @@ function edit:updateNpcViewClothing(savedCharacterData)
 				tempFolder.Name = "RigLoadingFolderCustomNpc"
 				tempFolder.Parent = workspace
 
+				local otherNpcParent = npc.Parent
+
 				local newNpc = npc:Clone()
 				newNpc.Parent = tempFolder
 
@@ -90,12 +117,17 @@ function edit:updateNpcViewClothing(savedCharacterData)
 
 				task.wait(1)
 
-				newNpc.Parent = npcViewFrame
+				if npc == npcViewFrame:FindFirstChildOfClass("Model") then
+					newNpc.Parent = npcViewFrame
 
-				npc:Destroy()
+					npc:Destroy()
+
+					npc = newNpc
+				else
+					newNpc.Parent = otherNpcParent
+				end
 
 				clothing = newClothing
-				npc = newNpc
 
 				tempFolder:Destroy()
 
@@ -143,7 +175,7 @@ function edit:npcView(savedCharacterData, viewFrame: ViewportFrame)
 
 	local rigType = savedCharacterData.RigType
 
-	local rig = assets:FindFirstChild(rigType):Clone() -- Clones a new rig
+	local rig = assets.Characters:FindFirstChild(rigType):Clone() -- Clones a new rig
 	rig.Parent = viewFrame
 
 	local angle = 10 -- current rotation angle
@@ -152,7 +184,7 @@ function edit:npcView(savedCharacterData, viewFrame: ViewportFrame)
 	local center = rig.PrimaryPart.Position -- the center location the camera should go around
 
 	if #savedCharacterData.Clothing > 0 then
-		edit:updateNpcViewClothing(savedCharacterData)
+		edit:updateNpcClothing(savedCharacterData, rig)
 	end
 
 	local camera = Instance.new("Camera") -- Camera to view the rig
@@ -187,7 +219,14 @@ end
 --Args: self: plugin (Only needed if editName is false)
 function edit:compileCharacter(editName)
 	local npc: Model = npcViewFrame:FindFirstChildOfClass("Model")
-	local characterData = { Clothing = {} }
+	local characterData = { Clothing = {}, currentAnimPack = "" }
+
+	local data = getData:Invoke()
+
+	if data["TEMPDATA"] then
+		characterData = data["TEMPDATA"]
+	end
+
 	local characterName
 
 	for _, v in pairs(npc:GetDescendants()) do
@@ -302,7 +341,7 @@ function edit:design(savedCharacterData)
 				elseif data.Type == "Face" then
 					--local id = string.split(data.Texture,"=")[2]
 
-					if data.Texture then
+					if data.Texture and data.Texture ~= "rbxasset://textures/face.png" then
 						faceIdBox.Text = data.Texture
 					end
 				end
@@ -478,86 +517,179 @@ local animationPackIds = {
 	39,
 }
 
-local stop = false
+--local stop = false
 
-function edit:animationFrame()
-	--print(game:GetService("AssetService"):GetBundleDetailsAsync(356))
+local animationConnections = {}
 
-	print("Picked up")
+local function animationFrame(savedCharacterName, savedCharacterData, id)
+	local rigType = savedCharacterData.RigType
 
-	local _, savedCharacterData = edit.compileCharacter(nil, true)
+	local animationPackFrame: Frame = animationPackTemplate:Clone()
+	local animationPackImage: ImageLabel = animationPackFrame.AssetImage
+	local activateButton: TextButton = animationPackFrame.ActivateButton
 
-	print(savedCharacterData)
-
-	stop = false
-
-	for _, id in ipairs(animationPackIds) do
+	if rigType == "R15" then
 		local success, assetInfo = pcall(function()
+			-- Gets info on the bundle (name, assetid's etc.)
 			return AssetService:GetBundleDetailsAsync(id)
 		end)
 
 		if not success then
 			warn("CUSTOM NPC ERROR: " .. assetInfo)
+			return
 		end
 
-		print(assetInfo)
+		if rigType == "R15" then
+			animationPackImage.Image = "rbxthumb://type=BundleThumbnail&id=" .. id .. "&w=150&h=150"
 
-		local animationPackFrame: Frame = animationPackTemplate:Clone()
-		local animationPackImage: ImageLabel = animationPackFrame.AssetImage
+			animationPackFrame.Title.Text = assetInfo.Name
+		end
 
-		animationPackImage.Image = "rbxthumb://type=Asset&id="..assetInfo.Id.."&w=420&h=420"
-
-		animationPackFrame.Parent = animations
-
-		animationPackFrame.Title.Text = assetInfo.Name
-
-		--[[
-		local rig = edit:npcView(savedCharacterData, viewFrame)
-		local humanoid: Humanoid = rig.Humanoid
-		local animator: Animator = humanoid.Animator
-
-		local animationsFound = assetInfo.Items
-
-		task.spawn(function()
-			-- while true do
-			-- 	if stop then
-			-- 		break
-			-- 	end
-
-			for _, animationFound in pairs(animationsFound) do
-				if stop then
-					break
+		designConnections["ActivateButton" .. id] = activateButton.MouseButton1Click:Connect(function()
+			--[[
+			local selectedBefore = savedCharacterData.currentAnimPack
+	
+			if selectedBefore ~= "" then
+				local frame: Frame = animations[selectedBefore]
+	
+				if not frame then
+					warn("CUSTOM NPC ERROR: When trying to get frame returned nil")
+					return
 				end
-
-				--print(animationFound)
-
-				local animation = Instance.new("Animation")
-				--http://www.roblox.com/asset/?id=
-				animation.AnimationId = "http://www.roblox.com/asset/?id=" .. animationFound.Id
-				animation.Parent = workspace
-
-				print(animation)
-
-				local track: AnimationTrack = animator:LoadAnimation(animation)
-
-				track.Looped = true
-				track.Priority = Enum.AnimationPriority.Action4
-
-				track:Play()
-
-				task.wait(3)
-
-				track:Stop()
-				animation:Destroy()
+	
+				mouseEnter(frame, Color3.fromRGB(252, 168, 0))
+				mouseLeave(frame, Color3.fromRGB(49, 49, 49))
+	
+				frame.BackgroundColor3 = Color3.fromRGB(173, 170, 170)
 			end
-			--end
+	
+			if animationConnections[animationPackFrame.Name .. "HoverEnd"] then
+				animationConnections[animationPackFrame.Name .. "HoverEnd"]:Disconnect()
+				animationConnections[animationPackFrame.Name .. "HoverStart"] = nil
+			end
+	
+			if animationConnections[animationPackFrame.Name .. "HoverStart"] then
+				animationConnections[animationPackFrame.Name .. "HoverStart"]:Disconnect()
+				animationConnections[animationPackFrame.Name .. "HoverStart"] = nil
+			end
+	
+			animationPackFrame.BackgroundColor3 = Color3.fromRGB(152, 152, 152)
+			--]]
+
+			local data = getData:Invoke()
+
+			if data["TEMPDATA"] then
+				selectedAnimPackLabel.Text = "Selected Animation Pack: None"
+				data["TEMPDATA"] = nil
+			else
+				selectedAnimPackLabel.Text = "Selected Animation Pack: " .. assetInfo.Name
+
+				if savedCharacterName ~= "" then
+					data[savedCharacterName] = savedCharacterData
+					data[savedCharacterName].currentAnimPack = assetInfo.Name
+				else
+					-- TEMPDATA is for data that is temporarily going to be in the data but is going to be set as the savedCharacterData when its being compiled
+					data["TEMPDATA"] = savedCharacterData
+					data["TEMPDATA"].currentAnimPack = assetInfo.Name
+				end
+			end
+
+			-- What if its a new character? How would I update savedCharacterName when it doesn't even exist
+
+			--print("Saving data animation package")
+			setData:Fire(data)
 		end)
-		--]]
+
+		animationPackFrame.Name = assetInfo.Name
+	else
+		animationPackFrame.Title.Text = "R6 Default Animation"
+		animationPackImage.Image = "rbxthumb://type=BundleThumbnail&id=8246626421&w=150&h=150"
+
+		designConnections["ActivateButtonR6Default"] = activateButton.MouseButton1Click:Connect(function()
+			local data = getData:Invoke()
+
+			if data["TEMPDATA"] then
+				selectedAnimPackLabel.Text = "Selected Animation Pack: None"
+				data["TEMPDATA"] = nil
+			else
+				selectedAnimPackLabel.Text = "Selected Animation Pack: R6 Default"
+
+				if savedCharacterName ~= "" then
+					data[savedCharacterName] = savedCharacterData
+					data[savedCharacterName].currentAnimPack = "R6Default"
+				else
+					-- TEMPDATA is for data that is temporarily going to be in the data but is going to be set as the savedCharacterData when its being compiled
+					data["TEMPDATA"] = savedCharacterData
+					data["TEMPDATA"].currentAnimPack = "R6Default"
+				end
+			end
+
+			-- What if its a new character? How would I update savedCharacterName when it doesn't even exist
+
+			--print("Saving data animation package")
+			setData:Fire(data)
+		end)
+
+		animationPackFrame.Name = "R6Default"
+	end
+
+	local function mouseEnter(Frame, color)
+		animationConnections[Frame.Name .. "HoverStart"] = Frame.MouseEnter:Connect(function()
+			TweenService:Create(Frame, TweenInfo.new(0.25), { BackgroundColor3 = color }):Play()
+		end)
+	end
+
+	local function mouseLeave(Frame, color)
+		animationConnections[Frame.Name .. "HoverEnd"] = Frame.MouseLeave:Connect(function()
+			TweenService:Create(Frame, TweenInfo.new(0.25), { BackgroundColor3 = color }):Play()
+		end)
+	end
+
+	mouseEnter(animationPackFrame, Color3.fromRGB(252, 168, 0))
+	mouseLeave(animationPackFrame, Color3.fromRGB(49, 49, 49))
+
+	animationPackFrame.Parent = animations
+end
+
+function edit:animationFrame(savedCharacterName, savedCharacterData)
+	--print(game:GetService("AssetService"):GetBundleDetailsAsync(356))
+
+	print("Picked up")
+
+	-- local _, savedCharacterData = edit.compileCharacter(nil, true)
+
+	--print(savedCharacterData)
+
+	-- stop = false
+
+	if savedCharacterData.currentAnimPack == "" then
+		selectedAnimPackLabel.Text = "Selected Animation Pack: None"
+	else
+		selectedAnimPackLabel.Text = "Selected Animation Pack: " .. savedCharacterData.currentAnimPack
+	end
+
+	selectedAnimPackLabel.Visible = true
+
+	if savedCharacterData.RigType == "R15" then
+		for _, id in ipairs(animationPackIds) do
+			task.spawn(animationFrame, savedCharacterName, savedCharacterData, id)
+		end
+	else
+		task.spawn(animationFrame, savedCharacterName, savedCharacterData)
 	end
 end
 
 function edit:cleanUpAnimationFrame()
-	stop = true
+	--stop = true
+
+	selectedAnimPackLabel.Text = "Selected Animation Pack: None"
+
+	selectedAnimPackLabel.Visible = false
+	animations.Visible = false
+
+	for _, connection: RBXScriptConnection in pairs(animationConnections) do
+		connection:Disconnect()
+	end
 
 	for _, frame: Frame in pairs(animations:GetChildren()) do
 		if frame:IsA("Frame") then
@@ -568,7 +700,7 @@ end
 
 -- Opens the edit frame to edit a character
 function edit.new(savedCharacterName, savedCharacterData)
-	require(script.Parent.barScripts):initEditFrameButtons(savedCharacterData)
+	require(script.Parent.barScripts):initEditFrameButtons(savedCharacterName, savedCharacterData)
 
 	editFrame.Visible = true
 
@@ -580,6 +712,16 @@ function edit:cleanUp()
 	require(script.Parent.barScripts):cleanUpEditFrame()
 
 	cleanUpNpcView()
+
+	edit:cleanUpAnimationFrame()
+
+	local data = getData:Invoke()
+
+	if data["TEMPDATA"] then
+		data["TEMPDATA"] = nil
+	end
+
+	setData:Fire(data)
 
 	editFrame.Visible = false
 end
