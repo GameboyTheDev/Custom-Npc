@@ -330,6 +330,8 @@ function barScripts:cleanUpColorPicker()
 end
 
 function barScripts:cleanUpEditFrame()
+	barScripts:cleanUpColorPicker()
+	
 	for _, connection: RBXScriptConnection in pairs(editFrameConnections) do
 		connection:Disconnect()
 	end
