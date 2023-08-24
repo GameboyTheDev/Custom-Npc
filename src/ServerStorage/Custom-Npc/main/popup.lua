@@ -68,7 +68,7 @@ function popup:rigTypePopup()
 		edit:npcView({ Clothing = {}, RigType = viewFrame:GetAttribute("RigType") }, viewPortFrame)
 
 		mouseEnter(viewFrame, Color3.fromRGB(252, 168, 0))
-		mouseLeave(viewFrame, Color3.fromRGB(62,62,62))
+		mouseLeave(viewFrame, Color3.fromRGB(62, 62, 62))
 
 		connections["R6ButtonClick"] = activateButton.MouseButton1Click:Connect(function()
 			chosenRigType = viewFrame.Name
@@ -77,7 +77,7 @@ function popup:rigTypePopup()
 	end
 
 	mouseEnter(cancel, Color3.fromRGB(255, 0, 0))
-	mouseLeave(cancel, Color3.fromRGB(255,255,255))
+	mouseLeave(cancel, Color3.fromRGB(255, 255, 255))
 
 	connections["cancelButtonClick"] = cancel.MouseButton1Click:Connect(function()
 		chosenRigType = ""
@@ -100,6 +100,8 @@ end
 -- Gives the user a popup to change a character's name
 -- Args: self: plugin, oldSavedCharacterName, savedCharacterData
 function popup:editNamePopup(isNewName, oldSavedCharacterName, savedCharacterData)
+	print("editNamePopup")
+
 	local data = getData:Invoke() --loadData:getData()
 
 	local connections = {}
@@ -119,15 +121,15 @@ function popup:editNamePopup(isNewName, oldSavedCharacterName, savedCharacterDat
 
 	popupFrame.Parent = background
 
-	local function mouseEnter(button: GuiButton, color: Color3)
+	local function mouseEnter(button: GuiButton, color)
 		connections[button.Name .. "HoverStart"] = button.MouseEnter:Connect(function()
-			TweenService:Create(confirm, TweenInfo.new(0.25), { TextColor3 = color }):Play()
+			TweenService:Create(button, TweenInfo.new(0.25), { TextColor3 = color }):Play()
 		end)
 	end
 
 	local function mouseLeave(button: GuiButton)
 		connections[button.Name .. "HoverEnd"] = button.MouseLeave:Connect(function()
-			TweenService:Create(cancel, TweenInfo.new(0.25), { TextColor3 = Color3.fromRGB(255, 255, 255) }):Play()
+			TweenService:Create(button, TweenInfo.new(0.25), { TextColor3 = Color3.fromRGB(255, 255, 255) }):Play()
 		end)
 	end
 

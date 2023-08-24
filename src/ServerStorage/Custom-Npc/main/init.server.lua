@@ -158,13 +158,22 @@ function loadData()
 				editModule:cleanUp()
 				--editModule:cleanUpDesign()
 			else
-				print("Refiring: ", savedCharacterData)
+				if background:FindFirstChild("popupFrameClone") then
+					return
+				end
+
+				--print("Refiring: ", savedCharacterData)
+
 				editModule.new(savedCharacterName, savedCharacterData)
 			end
 		end)
 		--print("Done setting up", savedCharacterName)
 		--end
 	end
+
+	-- if data["TEMPDATA"] then
+	-- 	data["TEMPDATA"] = nil
+	-- end
 
 	--print("Data loaded")
 end
@@ -188,7 +197,7 @@ mainButton.Click:Connect(function()
 		plugin:SetSetting(dataKey, newData)
 
 		data = newData
-		
+
 		widget.Enabled = false
 	else
 		widget.Enabled = true

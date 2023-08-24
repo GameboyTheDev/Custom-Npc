@@ -27,19 +27,14 @@ local editFrame: Frame = main.Edit
 local npcView: ViewportFrame = editFrame.NpcView
 --local npcViewFrame : WorldModel = npcView:FindFirstChildOfClass("WorldModel")
 local designFrame: Frame = editFrame.Design
+local colorPicker: Frame = editFrame.ColorPicker
 local animationsFrame: Frame = editFrame.Animations
 local npcsList: ScrollingFrame = menu.NpcsList.List
 
 function barScripts:newNpcButton()
 	bar.CreateButton.MouseButton1Click:Connect(function()
 		if not editFrame.Visible and not background:FindFirstChild("chooseCharacterTypeClone") then
-			local characterData = { Clothing = {}, currentAnimPack = "" }
-
-			-- local rigType = popup:rigTypePopup()
-
-			-- table.insert(characterData, {RigType = rigType})
-
-			-- print(characterData)
+			local characterData = { Clothing = {}, BodyColors = {}, currentAnimPack = "" }
 
 			characterData.RigType = popup:rigTypePopup()
 
@@ -48,9 +43,11 @@ function barScripts:newNpcButton()
 			end
 
 			editModule.new("", characterData)
-			--barScripts:designButton({Clothing = {}})
 		else
-			--barScripts:cleanUpDesignButton()
+			if background:FindFirstChild("popupFrameClone") then
+				return
+			end
+
 			editModule:cleanUp()
 		end
 	end)
@@ -68,10 +65,6 @@ function barScripts:saveButton()
 			-- If the newCharacterName returns the bool of false than that means the user didn't want to change the name.
 			if newCharacterName == false then
 				return
-			end
-
-			if data["TEMPDATA"] then
-				data["TEMPDATA"] = nil
 			end
 
 			--print("Picked up from compile: ", newCharacter)
@@ -127,6 +120,10 @@ function barScripts:designButton(savedCharacterData)
 		if designFrame.Visible then
 			editModule:cleanUpDesign()
 		else
+			if colorPicker.Visible then
+				barScripts:cleanUpColorPicker()
+			end
+
 			if animationsFrame.Visible then
 				editModule:cleanUpAnimationFrame()
 			end
@@ -213,6 +210,10 @@ function barScripts:animationButton(savedCharacterName, savedCharacterData)
 				editModule:cleanUpDesign()
 			end
 
+			if colorPicker.Visible then
+				barScripts:cleanUpColorPicker()
+			end
+
 			animationsFrame.Visible = true
 
 			editModule:animationFrame(savedCharacterName, savedCharacterData)
@@ -222,6 +223,112 @@ function barScripts:animationButton(savedCharacterName, savedCharacterData)
 	end)
 end
 
+-- Changing the body colors of the rigs
+function barScripts:colorPicker(savedCharacterName, savedCharacterData)
+	bar.ColorPicker.MouseButton1Click:Connect(function()
+		if colorPicker.Visible then
+			barScripts:cleanUpColorPicker()
+			
+		else
+			if animationsFrame.Visible then
+				editModule:cleanUpAnimationFrame()
+			end
+
+			if designFrame.Visible then
+				editModule:cleanUpDesign()
+			end
+
+			local defaultColor = "127,127,127"
+
+			for _, frame: Frame in pairs(colorPicker:GetChildren()) do
+				if frame:IsA("Frame") then
+					local box: TextBox = frame.Box
+
+					local loadData = getData:Invoke()
+
+					local tempDataBefore = loadData["TEMPDATA"]
+
+					if tempDataBefore then
+						if tempDataBefore.BodyColors then
+							if tempDataBefore.BodyColors[frame.Name] then
+								box.Text = tempDataBefore.BodyColors[frame.Name]
+							end
+						end
+					elseif savedCharacterName ~= "" then
+						if savedCharacterData.BodyColors[frame.Name] then
+							box.Text = savedCharacterData.BodyColors[frame.Name]
+						end
+					end
+
+					editFrameConnections[frame.Name .. "ColorPickerBoxConnection"] = box.FocusLost:Connect(
+						function(enterPressed)
+							if not enterPressed then
+								return
+							end
+
+							if box.Text == "" then
+								-- Sets the color to the default npc grey color
+								box.Text = defaultColor
+							end
+
+							local split = string.split(box.Text, ",")
+
+							if #split < 3 then
+								box.Text = defaultColor
+								warn("CUSTOM NPC ERROR: Make sure you format the color as: 0,0,0 in RGB")
+								return
+							end
+
+							local data = getData:Invoke()
+
+							local tempData = data["TEMPDATA"]
+
+							if savedCharacterName == "" and tempData then
+								if not tempData.BodyColors then
+									tempData.BodyColors = {}
+								end
+
+								tempData.BodyColors[frame.Name] = box.Text
+
+								editModule:updateNpcClothing(tempData, npcView:FindFirstChildOfClass("Model"))
+							elseif savedCharacterName == "" and not tempData then
+								local _, compiledData = editModule:compileCharacter(true)
+
+								tempData = compiledData
+								tempData.BodyColors = {}
+								tempData.BodyColors[frame.Name] = box.Text
+
+								editModule:updateNpcClothing(tempData, npcView:FindFirstChildOfClass("Model"))
+							else
+								data[savedCharacterName].BodyColors[frame.Name] = box.Text
+
+								editModule:updateNpcClothing(
+									data[savedCharacterName],
+									npcView:FindFirstChildOfClass("Model")
+								)
+							end
+
+							setData:Fire(data)
+						end
+					)
+				end
+			end
+
+			colorPicker.Visible = true
+		end
+	end)
+end
+
+function barScripts:cleanUpColorPicker()
+	colorPicker.Visible = false
+
+	for connectionName, connection: RBXScriptConnection in pairs(editFrameConnections) do
+		if string.find(connectionName, "ColorPicker") then
+			connection:Disconnect()
+		end
+	end
+end
+
 function barScripts:cleanUpEditFrame()
 	for _, connection: RBXScriptConnection in pairs(editFrameConnections) do
 		connection:Disconnect()
@@ -229,6 +336,7 @@ function barScripts:cleanUpEditFrame()
 end
 
 function barScripts:initEditFrameButtons(savedCharacterName, savedCharacterData)
+	barScripts:colorPicker(savedCharacterName, savedCharacterData)
 	barScripts:animationButton(savedCharacterName, savedCharacterData)
 	barScripts:designButton(savedCharacterData)
 	barScripts:uploadCharacterButton(savedCharacterName, savedCharacterData)

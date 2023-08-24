@@ -48,8 +48,8 @@ local function equipFace(npc, inputtedId)
 	local _, message = pcall(function()
 		local info = MarketplaceService:GetProductInfo(tonumber(id))
 
-		if info.AssetTypeId ~= 13 then
-			error("Only decal ids are allowed.")
+		if info.AssetTypeId ~= 13 and info.AssetTypeId ~= 1 and info.AssetTypeId ~= 18 then
+			error("Id invalid, make sure you are using an image, face or decal." .. info.AssetTypeId)
 			return
 		end
 	end)
@@ -77,6 +77,33 @@ end
 
 function edit:updateNpcClothing(savedCharacterData, npc)
 	--local npc = npcViewFrame:FindFirstChildOfClass("Model")
+	local bodyColors: BodyColors = npc:FindFirstChildOfClass("BodyColors")
+
+	if not bodyColors then
+		bodyColors = Instance.new("BodyColors")
+		bodyColors.Parent = npc
+	end
+
+	local function getColor(color: string)
+		local split = string.split(color, ",")
+		return Color3.fromRGB(tonumber(split[1]),tonumber(split[2]),tonumber(split[3]))
+	end
+
+	for name, colorData in pairs(savedCharacterData.BodyColors) do
+		if name == "Head" then
+			bodyColors.HeadColor3 = getColor(colorData)
+		elseif name == "LeftArm" then
+			bodyColors.LeftArmColor3 = getColor(colorData)
+		elseif name == "RightArm" then
+			bodyColors.RightArmColor3 = getColor(colorData)
+		elseif name == "LeftLeg" then
+			bodyColors.LeftLegColor3 = getColor(colorData)
+		elseif name == "RightLeg" then
+			bodyColors.RightLegColor3 = getColor(colorData)
+		elseif name == "Torso" then
+			bodyColors.TorsoColor3 = getColor(colorData)
+		end
+	end
 
 	for _, data in pairs(savedCharacterData.Clothing) do
 		if data.Type then
@@ -225,6 +252,7 @@ function edit:compileCharacter(editName)
 
 	if data["TEMPDATA"] then
 		characterData = data["TEMPDATA"]
+		data["TEMPDATA"] = nil
 	end
 
 	local characterName
@@ -580,7 +608,11 @@ local function animationFrame(savedCharacterName, savedCharacterData, id)
 
 			if data["TEMPDATA"] then
 				selectedAnimPackLabel.Text = "Selected Animation Pack: None"
-				data["TEMPDATA"] = nil
+				data["TEMPDATA"].currentAnimPack = nil
+
+				if #data["TEMPDATA"] <= 0 then
+					data["TEMPDATA"] = nil
+				end
 			else
 				selectedAnimPackLabel.Text = "Selected Animation Pack: " .. assetInfo.Name
 
@@ -610,7 +642,11 @@ local function animationFrame(savedCharacterName, savedCharacterData, id)
 
 			if data["TEMPDATA"] then
 				selectedAnimPackLabel.Text = "Selected Animation Pack: None"
-				data["TEMPDATA"] = nil
+				data["TEMPDATA"].currentAnimPack = nil
+
+				if #data["TEMPDATA"] <= 0 then
+					data["TEMPDATA"] = nil
+				end
 			else
 				selectedAnimPackLabel.Text = "Selected Animation Pack: R6 Default"
 
