@@ -238,7 +238,7 @@ function barScripts:colorPicker(savedCharacterName, savedCharacterData)
 				editModule:cleanUpDesign()
 			end
 
-			local defaultColor = "127,127,127"
+			local defaultColor = "127, 127, 127"
 
 			for _, frame: Frame in pairs(colorPicker:GetChildren()) do
 				if frame:IsA("Frame") then
