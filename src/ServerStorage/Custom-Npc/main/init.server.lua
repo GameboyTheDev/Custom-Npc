@@ -7,7 +7,7 @@ local mainButton: PluginToolbarButton =
 -- The plugin widget (The UI the user interacts with)
 local widget = plugin:CreateDockWidgetPluginGui(
 	"PluginDock",
-	DockWidgetPluginGuiInfo.new(Enum.InitialDockState.Float, false, false, 800, 650, 400, 400)
+	DockWidgetPluginGuiInfo.new(Enum.InitialDockState.Float, true, false, 500, 400, 200, 200) -- Testing dockui
 )
 
 widget.Title = "Custom-Npc"

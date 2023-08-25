@@ -750,6 +750,10 @@ function edit.new(savedCharacterName, savedCharacterData)
 		end)
 
 		closeButtonConnections["closeClick"] = close.MouseButton1Click:Connect(function()
+			if background:FindFirstChild("popupFrameClone") then
+				return
+			end
+			
 			edit:cleanUp()
 		end)
 	--end
