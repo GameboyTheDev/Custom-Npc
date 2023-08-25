@@ -7,7 +7,7 @@ local mainButton: PluginToolbarButton =
 -- The plugin widget (The UI the user interacts with)
 local widget = plugin:CreateDockWidgetPluginGui(
 	"PluginDock",
-	DockWidgetPluginGuiInfo.new(Enum.InitialDockState.Float, false, false, 400, 400, 250, 250)
+	DockWidgetPluginGuiInfo.new(Enum.InitialDockState.Float, false, false, 800, 650, 400, 400)
 )
 
 widget.Title = "Custom-Npc"
@@ -154,18 +154,23 @@ function loadData()
 		end)
 
 		connections[savedCharacterName .. "_loadCharacterClick"] = loadCharacter.MouseButton1Click:Connect(function()
-			if editFrame.Visible then
-				editModule:cleanUp()
-				--editModule:cleanUpDesign()
-			else
-				if background:FindFirstChild("popupFrameClone") then
-					return
-				end
+			if background:FindFirstChild("popupFrameClone") then
+				return
+			end
 
+			-- if editFrame.Visible then
+			-- 	editModule:cleanUp()
+
+			-- 	editModule.new(savedCharacterName, savedCharacterData)
+
+			-- 	--editModule:cleanUpDesign()
+			-- else
 				--print("Refiring: ", savedCharacterData)
 
-				editModule.new(savedCharacterName, savedCharacterData)
-			end
+				if not editFrame.Visible then
+					editModule.new(savedCharacterName, savedCharacterData)
+				end
+			--end
 		end)
 		--print("Done setting up", savedCharacterName)
 		--end

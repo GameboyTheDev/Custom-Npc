@@ -43,17 +43,17 @@ function barScripts:newNpcButton()
 			end
 
 			editModule.new("", characterData)
-		else
-			if background:FindFirstChild("popupFrameClone") then
-				return
-			end
+		-- else
+		-- 	if background:FindFirstChild("popupFrameClone") then
+		-- 		return
+		-- 	end
 
-			editModule:cleanUp()
+		-- 	editModule:cleanUp()
 		end
 	end)
 end
 
---Args: self: plugin
+-- Args: self: plugin
 function barScripts:saveButton()
 	bar.SaveButton.MouseButton1Click:Connect(function()
 		if editFrame.Visible and not background:FindFirstChild("popupFrameClone") then
@@ -331,7 +331,7 @@ end
 
 function barScripts:cleanUpEditFrame()
 	barScripts:cleanUpColorPicker()
-	
+
 	for _, connection: RBXScriptConnection in pairs(editFrameConnections) do
 		connection:Disconnect()
 	end

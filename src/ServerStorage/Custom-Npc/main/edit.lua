@@ -246,7 +246,7 @@ end
 --Args: self: plugin (Only needed if editName is false)
 function edit:compileCharacter(editName)
 	local npc: Model = npcViewFrame:FindFirstChildOfClass("Model")
-	local characterData = { Clothing = {}, currentAnimPack = "" }
+	local characterData = { Clothing = {}, BodyColors = {}, currentAnimPack = "" }
 
 	local data = getData:Invoke()
 
@@ -734,8 +734,26 @@ function edit:cleanUpAnimationFrame()
 	end
 end
 
+local closeButtonConnections = {}
+
 -- Opens the edit frame to edit a character
 function edit.new(savedCharacterName, savedCharacterData)
+	--if savedCharacterName ~= "" then
+		local close: TextButton = editFrame.Close
+
+		closeButtonConnections["closeHoverStart"] = close.MouseEnter:Connect(function()
+			close.TextColor3 = Color3.fromRGB(255,0,0)
+		end)
+
+		closeButtonConnections["closeHoverEnd"] = close.MouseLeave:Connect(function()
+			close.TextColor3 = Color3.fromRGB(255, 255, 255)
+		end)
+
+		closeButtonConnections["closeClick"] = close.MouseButton1Click:Connect(function()
+			edit:cleanUp()
+		end)
+	--end
+
 	require(script.Parent.barScripts):initEditFrameButtons(savedCharacterName, savedCharacterData)
 
 	editFrame.Visible = true
@@ -745,6 +763,10 @@ end
 
 -- Cleans up the edit frame (Cleans up connections etc.)
 function edit:cleanUp()
+	for _, connection: RBXScriptConnection in pairs(closeButtonConnections) do
+		connection:Disconnect()
+	end
+
 	require(script.Parent.barScripts):cleanUpEditFrame()
 
 	cleanUpNpcView()
@@ -758,6 +780,8 @@ function edit:cleanUp()
 	end
 
 	setData:Fire(data)
+
+	editFrame.Close.TextColor3 = Color3.fromRGB(255, 255, 255)
 
 	editFrame.Visible = false
 end
