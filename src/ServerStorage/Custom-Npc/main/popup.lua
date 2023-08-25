@@ -100,7 +100,7 @@ end
 -- Gives the user a popup to change a character's name
 -- Args: self: plugin, oldSavedCharacterName, savedCharacterData
 function popup:editNamePopup(isNewName, oldSavedCharacterName, savedCharacterData)
-	print("editNamePopup")
+	-- print("editNamePopup")
 
 	local data = getData:Invoke() --loadData:getData()
 

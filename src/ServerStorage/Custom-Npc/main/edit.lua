@@ -690,7 +690,7 @@ end
 function edit:animationFrame(savedCharacterName, savedCharacterData)
 	--print(game:GetService("AssetService"):GetBundleDetailsAsync(356))
 
-	print("Picked up")
+	-- print("Picked up")
 
 	-- local _, savedCharacterData = edit.compileCharacter(nil, true)
 

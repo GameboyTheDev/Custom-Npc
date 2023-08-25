@@ -93,7 +93,7 @@ function barScripts:saveButton()
 
 				-- Sets the new data in the plugin
 				--self:SetSetting(dataKey, data)
-				print("Saving data", data)
+				-- print("Saving data", data)
 
 				setData:Fire(data)
 
@@ -108,7 +108,7 @@ function barScripts:saveButton()
 			-- Refresh's the npc list and loads the new data in
 			loadDataEvent:Fire()
 
-			print("CUSTOM NPC: Saved successfully")
+			-- print("CUSTOM NPC: Saved successfully")
 		end
 	end)
 end
@@ -198,7 +198,7 @@ function barScripts:uploadCharacterButton(savedCharacterName, savedCharacterData
 			-- Makes the player select the npc in studio
 			Selection:Set({ clonedNpc })
 
-			print("Loaded npc in workspace")
+			print("Loaded npc in workspace successfully")
 		end
 	end)
 end
@@ -276,7 +276,6 @@ function barScripts:colorPicker(savedCharacterName, savedCharacterData)
 							if #split < 3 then
 								box.Text = defaultColor
 								warn("CUSTOM NPC ERROR: Make sure you format the color as: 0,0,0 in RGB")
-								return
 							end
 
 							local data = getData:Invoke()

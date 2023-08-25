@@ -87,7 +87,7 @@ function loadData()
 	local connections = {}
 
 	for savedCharacterName, savedCharacterData in pairs(data) do
-		print(savedCharacterName, savedCharacterData)
+		-- print(savedCharacterName, savedCharacterData)
 
 		--if savedCharacterName ~= "TEMPDATA" then
 		local savedCharacterFrame = savedCharacterTemplate:Clone()
