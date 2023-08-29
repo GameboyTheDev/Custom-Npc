@@ -293,8 +293,6 @@ local designConnections = {}
 
 -- This initiates the design frame
 function edit:design(savedCharacterData)
-	local npc: Model = npcViewFrame:FindFirstChildOfClass("Model")
-
 	-- Here we are setting the design frames buttons up
 	for _, clothingFrame: Frame in pairs(design:GetChildren()) do
 		if clothingFrame:IsA("Frame") then
@@ -342,7 +340,7 @@ function edit:design(savedCharacterData)
 
 					designConnections[clothingFrame.Name .. clothingPieceButton.Text .. "ButtonClick"] = clothingPieceButton.MouseButton1Click:Connect(
 						function()
-							for _, v in pairs(npc:GetChildren()) do
+							for _, v in pairs(npcViewFrame:FindFirstChildOfClass("Model"):GetChildren()) do
 								if v.ClassName == clothingFrame:GetAttribute("CustomizationType") then
 									if v:IsA("Shirt") then
 										if v.ShirtTemplate == id then
@@ -376,6 +374,8 @@ function edit:design(savedCharacterData)
 			end
 		end
 	end
+
+	local npc: Model = npcViewFrame:FindFirstChildOfClass("Model")
 
 	--print("Loaded")
 
@@ -772,6 +772,8 @@ function edit:cleanUp()
 	end
 
 	require(script.Parent.barScripts):cleanUpEditFrame()
+
+	edit:cleanUpDesign()
 
 	cleanUpNpcView()
 

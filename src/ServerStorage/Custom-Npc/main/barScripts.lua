@@ -225,10 +225,9 @@ end
 
 -- Changing the body colors of the rigs
 function barScripts:colorPicker(savedCharacterName, savedCharacterData)
-	bar.ColorPicker.MouseButton1Click:Connect(function()
+	editFrameConnections["colorPickerButton"] = bar.ColorPicker.MouseButton1Click:Connect(function()
 		if colorPicker.Visible then
 			barScripts:cleanUpColorPicker()
-			
 		else
 			if animationsFrame.Visible then
 				editModule:cleanUpAnimationFrame()
@@ -237,6 +236,8 @@ function barScripts:colorPicker(savedCharacterName, savedCharacterData)
 			if designFrame.Visible then
 				editModule:cleanUpDesign()
 			end
+
+			colorPicker.Visible = true
 
 			local defaultColor = "127, 127, 127"
 
@@ -312,8 +313,6 @@ function barScripts:colorPicker(savedCharacterName, savedCharacterData)
 					)
 				end
 			end
-
-			colorPicker.Visible = true
 		end
 	end)
 end

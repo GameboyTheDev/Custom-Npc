@@ -53,7 +53,7 @@ setData.Event:Connect(function(newData)
 
 	data = newData
 
-	print("setData event: ", data)
+	-- print("setData event: ", data)
 end)
 
 local barScripts = require(script.barScripts)

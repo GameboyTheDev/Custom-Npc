@@ -171,6 +171,11 @@ function popup:editNamePopup(isNewName, oldSavedCharacterName, savedCharacterDat
 		--local cancelName = false
 
 		connections["confirmButton"] = confirm.MouseButton1Click:Connect(function()
+			if string.match(editNameTextBox.Text, "%W") then
+				warn("CUSTOM NPC ERROR: Special characters are not allowed in the name of your NPC.")
+				return
+			end
+
 			newName = editNameTextBox.Text
 			stop = true
 			cleanUpPopupFrame(popupFrame, connections)
