@@ -180,7 +180,7 @@ function barScripts:uploadCharacterButton(savedCharacterName, savedCharacterData
 				return
 			end
 
-			if not animations and humanoid.RigType == Enum.HumanoidRigType.R15 then
+			if not animations and savedCharacterData.currentAnimPack ~= "" and humanoid.RigType == Enum.HumanoidRigType.R15 then
 				warn("CUSTOM NPC ERROR: Animations not found for " .. savedCharacterData.currentAnimPack)
 				return
 			end
