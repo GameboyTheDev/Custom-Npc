@@ -20,7 +20,7 @@ local data
 ]]
 --
 
-local dataKey = "PluginDataTest9"
+local dataKey = "PluginDataTest9" -- Offical
 
 local assets = script.Parent.Assets
 local events = assets.Events
@@ -39,6 +39,9 @@ local menu: Frame = background.Menu
 
 local editFrame: Frame = main.Edit
 local npcsList: ScrollingFrame = menu.NpcsList.List
+local searchBarFrame: Frame = menu.SearchBar
+local searchButton: GuiButton = searchBarFrame.SearchButton
+local searchBar: TextBox = searchBarFrame.Bar
 
 getData.OnInvoke = function()
 	return data
@@ -165,11 +168,11 @@ function loadData()
 
 			-- 	--editModule:cleanUpDesign()
 			-- else
-				--print("Refiring: ", savedCharacterData)
+			--print("Refiring: ", savedCharacterData)
 
-				if not editFrame.Visible then
-					editModule.new(savedCharacterName, savedCharacterData)
-				end
+			if not editFrame.Visible then
+				editModule.new(savedCharacterName, savedCharacterData)
+			end
 			--end
 		end)
 		--print("Done setting up", savedCharacterName)
@@ -186,6 +189,77 @@ end
 loadDataEvent.Event:Connect(loadData)
 
 loadData()
+
+local maxResults = 4
+
+searchBar:GetPropertyChangedSignal("Text"):Connect(function()
+	if searchBar.Text ~= "" then
+		for _, savedCharacterFrame: Frame in pairs(npcsList:GetChildren()) do
+			if savedCharacterFrame:IsA("Frame") then
+				savedCharacterFrame.Visible = false
+			end
+		end
+	
+		local results = {}
+		local search = searchBar.Text:lower()
+	
+		-- Score results:
+		for _, savedCharacterFrame: Frame in ipairs(npcsList:GetChildren()) do
+			if savedCharacterFrame:IsA("Frame") then
+				local lowerCharacterName = string.lower(savedCharacterFrame.Name)
+	
+				if lowerCharacterName:find(search, 1, true) or search:find(lowerCharacterName, 1, true) then
+					local score = math.abs(#lowerCharacterName - #search)
+					table.insert(results, { lowerCharacterName, score, savedCharacterFrame })
+				end
+			end
+		end
+	
+		-- Sort by score:
+		table.sort(results, function(a, b)
+			return (a[2] < b[2])
+		end)
+	
+		-- Trim results table:
+		if #results > maxResults then
+			results = { table.unpack(results, 1, maxResults) }
+		end
+	
+		-- Display results:
+		for _, result in ipairs(results) do
+			local frameFound: Frame = result[3]
+
+			if not frameFound and not frameFound:IsA("Frame") then continue end
+
+			frameFound.Visible = true
+		end
+	else
+		for _, savedCharacterFrame: Frame in pairs(npcsList:GetChildren()) do
+			if savedCharacterFrame:IsA("Frame") then
+				savedCharacterFrame.Visible = true
+			end
+		end
+	end
+end)
+
+-- local input = searchBar.Text
+
+-- if input ~= "" then
+-- 	local lowerInput = string.lower(input)
+
+-- 	for _, savedCharacterFrame: Frame in pairs(npcsList:GetChildren()) do
+-- 		if savedCharacterFrame:IsA("Frame") then
+-- 			local lowerSavedCharacterName = string.lower(savedCharacterFrame.Name)
+-- 			savedCharacterFrame.Visible = string.find(lowerSavedCharacterName, lowerInput) and true or false
+-- 		end
+-- 	end
+-- else
+-- 	for _, savedCharacterFrame: Frame in pairs(npcsList:GetChildren()) do
+-- 		if savedCharacterFrame:IsA("Frame") then
+-- 			savedCharacterFrame.Visible = true
+-- 		end
+-- 	end
+-- end
 
 local isOpen = false
 
