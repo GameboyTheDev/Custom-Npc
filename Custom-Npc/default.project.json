@@ -1,0 +1,14 @@
+{
+  "name": "Custom-Npc",
+  "tree": {
+    "$className": "DataModel",
+    "ServerStorage": {
+      "Custom-Npc": {
+        "$className": "Folder",
+        "main": {
+          "$path": "main"
+        }
+      }
+    }
+  }
+}

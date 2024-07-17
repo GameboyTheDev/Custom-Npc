@@ -1,10 +1,9 @@
+local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
-
-local edit = require(script.Parent.edit)
 
 local popup = {}
 
-local assets: Folder = script.Parent.Parent.Assets
+local assets: Folder & any = script.Parent.Parent.Assets
 local events = assets.Events
 local ui = assets.UI
 
@@ -12,10 +11,11 @@ local setData: BindableEvent = events.setData
 local getData: BindableFunction = events.getData
 local loadData: BindableEvent = events.loadData
 
-local background: Frame = ui.Background
+local background: Frame & any = ui.Background
 
 local popupFrameClone = background.PopupFrame
 local chooseCharacterTypeLocation: Frame = background.ChooseCharacterType
+local customAvatarFrameLocation: Frame = background.CustomAvatar
 
 -- Cleans up the popup frame
 local function cleanUpPopupFrame(popupFrame, connections)
@@ -32,6 +32,10 @@ function popup:rigTypePopup()
 
 	local chooseCharacterType = chooseCharacterTypeLocation:Clone()
 	local cancel: GuiButton = chooseCharacterType.Cancel
+	local r15: GuiButton = chooseCharacterType.R15Button
+	local r6: GuiButton = chooseCharacterType.R6Button
+	local robloxian2: GuiButton = chooseCharacterType.Robloxian2Button
+	local customAvatar: GuiButton = chooseCharacterType.CustomAvatarButton
 
 	-- local r6Button: GuiButton = chooseCharacterType.ActivateButton
 	-- local r15Button: GuiButton = chooseCharacterType.ActivateButton
@@ -39,7 +43,8 @@ function popup:rigTypePopup()
 	local chosenRigType = ""
 	local stop = false
 
-	local viewFrames = { chooseCharacterType["R6"], chooseCharacterType["R15"] }
+	--* Old character selection UI
+	--local viewFrames = { chooseCharacterType["R6"], chooseCharacterType["R15"] }
 
 	local function getGoal(instance, color)
 		if instance:IsA("TextButton") then
@@ -61,6 +66,13 @@ function popup:rigTypePopup()
 		end)
 	end
 
+	local customAvatarFrame: Frame & any = customAvatarFrameLocation:Clone()
+
+	customAvatarFrame.Visible = false
+	customAvatarFrame.Parent = background
+
+	-- This was with the old character selection UI
+	--[[
 	for _, viewFrame in pairs(viewFrames) do
 		local viewPortFrame: ViewportFrame = viewFrame.ViewportFrame
 		local activateButton: GuiButton = viewFrame.ActivateButton
@@ -75,12 +87,84 @@ function popup:rigTypePopup()
 			stop = true
 		end)
 	end
+	--]]
+
+	connections["CustomAvatarClick"] = customAvatar.MouseButton1Up:Connect(function()
+		local searchBar: TextBox = customAvatarFrame.SearchBar.Bar
+		local customAvatarCancel: TextButton = customAvatarFrame.Cancel
+		local customAvatarEdit: TextButton = customAvatarFrame.Edit
+		local avatarView: ImageLabel = customAvatarFrame.AvatarView
+
+		--local _connections
+
+		mouseEnter(customAvatarCancel, Color3.fromRGB(255, 0, 0))
+		mouseLeave(customAvatarCancel, Color3.fromRGB(255, 255, 255))
+
+		connections["CustomAvatarCancel"] = customAvatarCancel.MouseButton1Up:Connect(function()
+			customAvatarFrame.Visible = false
+			chosenRigType = "cancel"
+			stop = true
+		end)
+
+		local getUserId
+
+		connections["CustomAvatarSearchBar"] = searchBar.FocusLost:Connect(function()
+			local _, userIdFound = pcall(function()
+				return Players:GetUserIdFromNameAsync(searchBar.Text)
+			end)
+
+			if not userIdFound then
+				warn("CUSTOM NPC ERROR: Could not get userid")
+				return
+			end
+
+			if not avatarView then
+				return
+			end
+
+			if userIdFound then
+				pcall(function()
+					avatarView.Image = Players:GetUserThumbnailAsync(
+						userIdFound,
+						Enum.ThumbnailType.AvatarBust,
+						Enum.ThumbnailSize.Size420x420
+					)
+				end)
+			end
+
+			getUserId = userIdFound
+		end)
+
+		connections["EditButtonClick"] = customAvatarEdit.MouseButton1Up:Connect(function()
+			customAvatarFrame.Visible = false
+			chosenRigType = getUserId
+			stop = true
+		end)
+
+		chooseCharacterType.Visible = false
+		customAvatarFrame.Visible = true
+	end)
+
+	connections["Robloxian2ButtonClick"] = robloxian2.MouseButton1Up:Connect(function()
+		chosenRigType = "Robloxian2.0"
+		stop = true
+	end)
+
+	connections["R15ButtonClick"] = r15.MouseButton1Up:Connect(function()
+		chosenRigType = "R15"
+		stop = true
+	end)
+
+	connections["R6ButtonClick"] = r6.MouseButton1Up:Connect(function()
+		chosenRigType = "R6"
+		stop = true
+	end)
 
 	mouseEnter(cancel, Color3.fromRGB(255, 0, 0))
 	mouseLeave(cancel, Color3.fromRGB(255, 255, 255))
 
 	connections["cancelButtonClick"] = cancel.MouseButton1Click:Connect(function()
-		chosenRigType = ""
+		chosenRigType = "cancel"
 		stop = true
 	end)
 
@@ -92,7 +176,10 @@ function popup:rigTypePopup()
 		task.wait()
 	until stop
 
+	customAvatarFrame:Destroy()
 	cleanUpPopupFrame(chooseCharacterType, connections)
+
+	--print(chosenRigType)
 
 	return chosenRigType
 end
@@ -100,17 +187,15 @@ end
 -- Gives the user a popup to change a character's name and saves the savedCharacterData to that name
 -- Args: self: plugin, oldSavedCharacterName, savedCharacterData
 function popup:editNamePopup(isNewName, oldSavedCharacterName, savedCharacterData)
-	-- print("editNamePopup")
-
 	local data = getData:Invoke() --loadData:getData()
 
 	local connections = {}
 
 	local popupFrame = popupFrameClone:Clone()
 
-	local editNameFrame: Frame = popupFrame.EditNameFrame
+	local editNameFrame: Frame & any = popupFrame.EditNameFrame
 
-	local editNameTextBox: TextBox = editNameFrame:FindFirstChildOfClass("TextBox")
+	local editNameTextBox = editNameFrame:FindFirstChildOfClass("TextBox")
 	local cancel: GuiButton = editNameFrame.Cancel
 	local confirm: GuiButton = editNameFrame.Confirm
 
@@ -165,19 +250,17 @@ function popup:editNamePopup(isNewName, oldSavedCharacterName, savedCharacterDat
 		connections["cancelButton"] = cancel.MouseButton1Click:Connect(function()
 			cleanUpPopupFrame(popupFrame, connections)
 		end)
+
+		return
 	else
 		local newName = ""
 		local stop = false
 		--local cancelName = false
 
 		connections["confirmButton"] = confirm.MouseButton1Click:Connect(function()
-			local match = string.match(editNameTextBox.Text, "%W")
-			if match then
-				-- Spaces should be allowed in rig names
-				if match ~= " " then
-					warn("CUSTOM NPC ERROR: Special characters are not allowed in the name of your NPC.")
-					return
-				end
+			if string.match(editNameTextBox.Text, "%W") then
+				warn("CUSTOM NPC ERROR: Special characters are not allowed in the name of your NPC.")
+				return
 			end
 
 			newName = editNameTextBox.Text
@@ -216,12 +299,12 @@ function popup:deleteSavedCharacter(savedCharacterName)
 
 	local popupFrame = popupFrameClone:Clone()
 
-	local deleteFrame: Frame = popupFrame.DeleteFrame
+	local deleteFrame: Frame & any = popupFrame.DeleteFrame
 	local warningLabel: TextLabel = deleteFrame.WarningLabel
 	local deleteButton: GuiButton = deleteFrame.Delete
 	local cancelButton: GuiButton = deleteFrame.Cancel
 
-	warningLabel.Text = "Are you sure you want to delete " .. savedCharacterName .. "? This action can't be undone."
+	warningLabel.Text = "Are you sure you want to delete " .. savedCharacterName .. "? This action cannot be undone."
 
 	local connections = {}
 

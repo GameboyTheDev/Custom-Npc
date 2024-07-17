@@ -43,12 +43,12 @@ function barScripts:newNpcButton()
 			end
 
 			editModule.new("", characterData)
-		-- else
-		-- 	if background:FindFirstChild("popupFrameClone") then
-		-- 		return
-		-- 	end
+			-- else
+			-- 	if background:FindFirstChild("popupFrameClone") then
+			-- 		return
+			-- 	end
 
-		-- 	editModule:cleanUp()
+			-- 	editModule:cleanUp()
 		end
 	end)
 end
@@ -72,6 +72,9 @@ function barScripts:saveButton()
 			if data then
 				local npcsListChildrenAmount = #npcsList:GetChildren()
 
+				-- There is 1 instance in there (a UIListLayout)
+				npcsListChildrenAmount -= 1
+
 				if newCharacterName and newCharacterName ~= "" then
 					-- Returns if name already is being used
 					if data[newCharacterName] then
@@ -94,6 +97,8 @@ function barScripts:saveButton()
 				-- Sets the new data in the plugin
 				--self:SetSetting(dataKey, data)
 				-- print("Saving data", data)
+
+				--print(data)
 
 				setData:Fire(data)
 
@@ -129,6 +134,40 @@ function barScripts:designButton(savedCharacterData)
 			end
 
 			editModule:design(savedCharacterData)
+		end
+	end)
+end
+
+-- Args: self (plugin)
+function barScripts:insertCharacterButton()
+	bar.InsertButton.MouseButton1Up:Connect(function()
+		local selected: Model = game.Selection:Get()[1]
+
+		if not selected then
+			return
+		end
+
+		if not selected:IsA("Model") then
+			warn("CUSTOM NPC ERROR: Selection invalid")
+			return
+		end
+
+		if not selected:FindFirstChildOfClass("Humanoid") or not selected:FindFirstChild("HumanoidRootPart") then
+			warn("CUSTOM NPC ERROR: Npc not valid, Humanoid & HumanoidRootPart required")
+			return
+		end
+
+		local _, compiledCharacterData = editModule.compileCharacter(self, false, true, selected)
+
+		if not compiledCharacterData then
+			warn("compiledCharacterName or compiledCharacterData is nil")
+			return
+		end
+
+		if not editFrame.Visible then
+			editModule.new("", compiledCharacterData)
+		else
+			warn("CUSTOM NPC ERROR: The EditFrame is currently in use")
 		end
 	end)
 end
@@ -180,7 +219,11 @@ function barScripts:uploadCharacterButton(savedCharacterName, savedCharacterData
 				return
 			end
 
-			if not animations and savedCharacterData.currentAnimPack ~= "" and humanoid.RigType == Enum.HumanoidRigType.R15 then
+			if
+				not animations
+				and savedCharacterData.currentAnimPack ~= ""
+				and humanoid.RigType == Enum.HumanoidRigType.R15
+			then
 				warn("CUSTOM NPC ERROR: Animations not found for " .. savedCharacterData.currentAnimPack)
 				return
 			end
@@ -249,15 +292,29 @@ function barScripts:colorPicker(savedCharacterName, savedCharacterData)
 
 					local tempDataBefore = loadData["TEMPDATA"]
 
+					--print(savedCharacterName, savedCharacterData, "B")
+
+					--if savedCharacterName ~= "" then
+
+					local function Length(Table)
+						local counter = 0 
+						for _, v in pairs(Table) do
+							counter = counter + 1
+						end
+						return counter
+					end
+
 					if tempDataBefore then
 						if tempDataBefore.BodyColors then
 							if tempDataBefore.BodyColors[frame.Name] then
 								box.Text = tempDataBefore.BodyColors[frame.Name]
+								--print("TempData changed", tempDataBefore)
 							end
 						end
-					elseif savedCharacterName ~= "" then
+					elseif Length(savedCharacterData.BodyColors) > 0 then
 						if savedCharacterData.BodyColors[frame.Name] then
 							box.Text = savedCharacterData.BodyColors[frame.Name]
+							--print("Changed")
 						end
 					end
 
@@ -346,6 +403,7 @@ end
 function barScripts:Init()
 	barScripts:newNpcButton()
 	barScripts.saveButton(self)
+	barScripts.insertCharacterButton(self)
 	--barScripts:uploadCharacterButton()
 end
 

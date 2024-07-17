@@ -82,11 +82,12 @@ function edit:updateNpcClothing(savedCharacterData, npc)
 	if not bodyColors then
 		bodyColors = Instance.new("BodyColors")
 		bodyColors.Parent = npc
+		--print("New BodyColors created")
 	end
 
 	local function getColor(color: string)
 		local split = string.split(color, ",")
-		return Color3.fromRGB(tonumber(split[1]),tonumber(split[2]),tonumber(split[3]))
+		return Color3.fromRGB(tonumber(split[1]), tonumber(split[2]), tonumber(split[3]))
 	end
 
 	for name, colorData in pairs(savedCharacterData.BodyColors) do
@@ -125,8 +126,8 @@ function edit:updateNpcClothing(savedCharacterData, npc)
 				end)
 
 				if not success then
-					warn(clothing)
-					return
+					--warn(clothing)
+					continue
 				end
 
 				local tempFolder = Instance.new("Folder")
@@ -202,8 +203,12 @@ function edit:npcView(savedCharacterData, viewFrame: ViewportFrame)
 
 	local rigType = savedCharacterData.RigType
 
+	--print(savedCharacterData, "A")
+
 	local rig = assets.Characters:FindFirstChild(rigType):Clone() -- Clones a new rig
 	rig.Parent = viewFrame
+
+	--print(rig)
 
 	local angle = 10 -- current rotation angle
 	local speed = 1 -- How long it takes to do a full cycle
@@ -211,7 +216,9 @@ function edit:npcView(savedCharacterData, viewFrame: ViewportFrame)
 	local center = rig.PrimaryPart.Position -- the center location the camera should go around
 
 	if #savedCharacterData.Clothing > 0 then
+		--print(1)
 		edit:updateNpcClothing(savedCharacterData, rig)
+		--print(2)
 	end
 
 	local camera = Instance.new("Camera") -- Camera to view the rig
@@ -244,9 +251,22 @@ end
 
 -- This gets all of the instances the npc is wearing and compiles it into a table
 --Args: self: plugin (Only needed if editName is false)
-function edit:compileCharacter(editName)
+function edit:compileCharacter(editName, nameNeeded, npcOverride)
 	local npc: Model = npcViewFrame:FindFirstChildOfClass("Model")
-	local characterData = { Clothing = {}, BodyColors = {}, currentAnimPack = "" }
+
+	if npcOverride then
+		npc = npcOverride
+	end
+
+	local rigTypeFound = npc:FindFirstChildOfClass("Humanoid").RigType
+
+	if rigTypeFound == Enum.HumanoidRigType.R6 then
+		rigTypeFound = "R6"
+	elseif rigTypeFound == Enum.HumanoidRigType.R15 then
+		rigTypeFound = "R15"
+	end
+
+	local characterData = { Clothing = {}, BodyColors = {}, currentAnimPack = "", RigType = rigTypeFound }
 
 	local data = getData:Invoke()
 
@@ -255,7 +275,11 @@ function edit:compileCharacter(editName)
 		data["TEMPDATA"] = nil
 	end
 
-	local characterName
+	--? Idea: Make tempfolder full of accessories that don't have an assetid to store them in
+
+	local characterName = "" -- = "TempName"
+
+	--local accessoryFolder = Instance.new("Folder")
 
 	for _, v in pairs(npc:GetDescendants()) do
 		if v:IsA("Shirt") then
@@ -263,7 +287,49 @@ function edit:compileCharacter(editName)
 		elseif v:IsA("Pants") then
 			table.insert(characterData.Clothing, { Type = "Pants", PantsId = v.PantsTemplate })
 		elseif v:IsA("Accessory") then
+			--!!! MAJOR ISSUE CAN'T GET ACCESSORY ASSETID THROUGH ACCESSORY INSTANCE ITSELF
 			table.insert(characterData.Clothing, { Type = "Accessory", AssetId = v:GetAttribute("AssetId") })
+			--[[
+			if v:GetAttribute("AssetId") then
+				table.insert(characterData.Clothing, { Type = "Accessory", AssetId = v:GetAttribute("AssetId") })
+			else
+				local newAccessory: Accessory = v:Clone()
+
+				if accessoryFolder:FindFirstChild(v.Name) then
+					for i = 1, 10000 do
+						for _, accessory in pairs(accessoryFolder:GetChildren()) do
+							if string.find(accessory.Name, tostring(i)) then
+								continue
+							end
+						end
+						newAccessory.Name = v.Name .. "_" .. i
+					end
+				end
+
+				-- newAccessory.Parent = accessoryFolder
+			end
+			--]]
+		elseif v:IsA("BodyColors") then
+			local function convertColor3newToRGB(color: Color3)
+				-- c stands for converted
+				local cr, cg, cb = color.R * 255, color.G * 255, color.B * 255
+
+				return math.floor(cr), math.floor(cg), math.floor(cb)
+			end
+
+			local hr, hg, hb = convertColor3newToRGB(v.HeadColor3)
+			local lar, lag, lab = convertColor3newToRGB(v.LeftArmColor3)
+			local rar, rag, rab = convertColor3newToRGB(v.RightArmColor3)
+			local llr, llg, llb = convertColor3newToRGB(v.LeftLegColor3)
+			local rlr, rlg, rlb = convertColor3newToRGB(v.RightLegColor3)
+			local tr, tg, tb = convertColor3newToRGB(v.TorsoColor3)
+
+			characterData.BodyColors["Head"] = tostring(hr .. "," .. hg .. "," .. hb)
+			characterData.BodyColors["LeftArm"] = tostring(lar .. "," .. lag .. "," .. lab)
+			characterData.BodyColors["RightArm"] = tostring(rar .. "," .. rag .. "," .. rab)
+			characterData.BodyColors["LeftLeg"] = tostring(llr .. "," .. llg .. "," .. llb)
+			characterData.BodyColors["RightLeg"] = tostring(rlr .. "," .. rlg .. "," .. rlb)
+			characterData.BodyColors["Torso"] = tostring(tr .. "," .. tg .. "," .. tb)
 		elseif v:IsA("Decal") and v.Parent == npc.Head then
 			local texture = v.Texture
 
@@ -277,10 +343,27 @@ function edit:compileCharacter(editName)
 	end
 
 	if not editName then
-		characterName = require(script.Parent.popup).editNamePopup(self, true, nil, characterData)
+		if not nameNeeded then
+			characterName = require(script.Parent.popup).editNamePopup(self, true, nil, characterData)
+		end
 	end
 
-	characterData.RigType = npc.Name
+	-- if assets:FindFirstChild(characterName) then
+	-- 	for i = 1,10000 do
+	-- 		for _, accessory in pairs(accessoryFolder:GetChildren()) do
+	-- 			if string.find(accessory.Name, tostring(i)) then
+	-- 				continue
+	-- 			end
+	-- 		end
+	-- 		characterName = characterName.."_"..tostring(i)
+	-- 	end
+	-- 	warn("CUSTOM NPC ERROR: characterName already exists in PluginStorage")
+	-- end
+
+	--accessoryFolder.Name = characterName
+
+	--? Not sure what is going on here
+	--characterData.RigType = npc.Name
 
 	--print("Compiled: ", characterData)
 
@@ -307,7 +390,11 @@ function edit:design(savedCharacterData)
 					elseif data.Type == "Pants" then
 						id = data.PantsId
 					elseif data.Type == "Accessory" then
-						id = data.AssetId
+						if data.AssetId then
+							id = data.AssetId
+						else
+							continue
+						end
 					end
 
 					local success, name = pcall(function()
@@ -320,11 +407,11 @@ function edit:design(savedCharacterData)
 					end)
 
 					if not success then
-						warn(
-							"CUSTOM NPC ERROR: Name of "
-								.. id
-								.. " could not be retrieved, setting name of button to the asset id instead."
-						)
+						-- warn(
+						-- 	"CUSTOM NPC ERROR: Name of "
+						-- 		.. id
+						-- 		.. " could not be retrieved, setting name of button to the asset id instead."
+						-- )
 						name = id
 					end
 
@@ -390,7 +477,7 @@ function edit:design(savedCharacterData)
 
 	--print("Connecting...")
 
-	-- Here we are detecing the user's input if they add in a new piece of clothing etc.
+	-- Here we are detecting the user's input if they add in a new piece of clothing etc.
 	for _, clothingFrame: Frame in pairs(design:GetChildren()) do
 		if clothingFrame:IsA("Frame") then
 			local list: ScrollingFrame = clothingFrame:FindFirstChild("List")
@@ -739,23 +826,23 @@ local closeButtonConnections = {}
 -- Opens the edit frame to edit a character
 function edit.new(savedCharacterName, savedCharacterData)
 	--if savedCharacterName ~= "" then
-		local close: TextButton = editFrame.Close
+	local close: TextButton = editFrame.Close
 
-		closeButtonConnections["closeHoverStart"] = close.MouseEnter:Connect(function()
-			close.TextColor3 = Color3.fromRGB(255,0,0)
-		end)
+	closeButtonConnections["closeHoverStart"] = close.MouseEnter:Connect(function()
+		close.TextColor3 = Color3.fromRGB(255, 0, 0)
+	end)
 
-		closeButtonConnections["closeHoverEnd"] = close.MouseLeave:Connect(function()
-			close.TextColor3 = Color3.fromRGB(255, 255, 255)
-		end)
+	closeButtonConnections["closeHoverEnd"] = close.MouseLeave:Connect(function()
+		close.TextColor3 = Color3.fromRGB(255, 255, 255)
+	end)
 
-		closeButtonConnections["closeClick"] = close.MouseButton1Click:Connect(function()
-			if background:FindFirstChild("popupFrameClone") then
-				return
-			end
-			
-			edit:cleanUp()
-		end)
+	closeButtonConnections["closeClick"] = close.MouseButton1Click:Connect(function()
+		if background:FindFirstChild("popupFrameClone") then
+			return
+		end
+
+		edit:cleanUp()
+	end)
 	--end
 
 	require(script.Parent.barScripts):initEditFrameButtons(savedCharacterName, savedCharacterData)
@@ -786,6 +873,17 @@ function edit:cleanUp()
 	end
 
 	setData:Fire(data)
+
+	-- Clears all text from the textboxes
+	for _, v: TextBox in pairs(editFrame.ColorPicker:GetDescendants()) do
+		if v:IsA("TextBox") then
+			v.Text = "127, 127, 127"
+		end
+	end
+
+	-- if pluginStorage:FindFirstChild("TempData") then
+	-- 	pluginStorage:FindFirstChild("TempData"):Destroy()
+	-- end
 
 	editFrame.Close.TextColor3 = Color3.fromRGB(255, 255, 255)
 

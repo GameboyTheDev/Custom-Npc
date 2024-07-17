@@ -20,7 +20,7 @@ local data
 ]]
 --
 
-local dataKey = "PluginDataTest9" -- Offical
+local dataKey = "PluginDataTest9" --* Offical Data Key "PluginDataTest9"
 
 local assets = script.Parent.Assets
 local events = assets.Events
@@ -32,15 +32,15 @@ local loadDataEvent: BindableEvent = events.loadData
 
 local savedCharacterTemplate: Frame = ui.SavedCharacterTemplate
 
-local background: Frame = ui.Background
+local background: Frame & any = ui.Background
 
-local main: Frame = background.Main
-local menu: Frame = background.Menu
+local main: Frame & any = background.Main
+local menu: Frame & any = background.Menu
 
 local editFrame: Frame = main.Edit
 local npcsList: ScrollingFrame = menu.NpcsList.List
-local searchBarFrame: Frame = menu.SearchBar
-local searchButton: GuiButton = searchBarFrame.SearchButton
+local searchBarFrame: Frame & any = menu.SearchBar
+--local searchButton: GuiButton = searchBarFrame.SearchButton
 local searchBar: TextBox = searchBarFrame.Bar
 
 getData.OnInvoke = function()
@@ -52,6 +52,19 @@ setData.Event:Connect(function(newData)
 	-- 	newData["TEMPDATA"] = nil
 	-- end
 
+	--print(newData, "newData found")
+
+	-- if newData.BodyColors then
+	-- 	for bodyPart, color in pairs(newData.BodyColors) do
+	-- 		local encode = HttpService:JSONEncode(color)
+			
+	-- 	end
+	-- else
+	-- 	warn("CUSTOM NPC ERROR: BodyColors data not found.")
+	-- end
+
+	--print(newData)
+	
 	plugin:SetSetting(dataKey, newData)
 
 	data = newData
@@ -79,7 +92,7 @@ function loadData()
 		data = {}
 	end
 
-	for _, savedCharacterFrame: Frame in pairs(npcsList:GetChildren()) do
+	for _, savedCharacterFrame in pairs(npcsList:GetChildren()) do
 		if savedCharacterFrame:IsA("Frame") then
 			savedCharacterFrame:Destroy()
 		end
@@ -95,13 +108,13 @@ function loadData()
 		--if savedCharacterName ~= "TEMPDATA" then
 		local savedCharacterFrame = savedCharacterTemplate:Clone()
 
-		local loadCharacter: GuiButton = savedCharacterFrame.LoadCharacter
+		local loadCharacter: TextButton = savedCharacterFrame.LoadCharacter
 
 		local editName: GuiButton = savedCharacterFrame.EditName
-		local editImageLabel: ImageLabel = editName:FindFirstChildOfClass("ImageLabel")
+		local editImageLabel = editName:FindFirstChildOfClass("ImageLabel")
 
 		local trash: GuiButton = savedCharacterFrame.Trash
-		local trashImageLabel: ImageLabel = trash:FindFirstChildOfClass("ImageLabel")
+		local trashImageLabel = trash:FindFirstChildOfClass("ImageLabel")
 
 		loadCharacter.Text = savedCharacterName
 
@@ -171,7 +184,7 @@ function loadData()
 			--print("Refiring: ", savedCharacterData)
 
 			if not editFrame.Visible then
-				print(savedCharacterData)
+				--print(savedCharacterData)
 				editModule.new(savedCharacterName, savedCharacterData)
 			end
 			--end
@@ -195,7 +208,7 @@ local maxResults = 4
 
 searchBar:GetPropertyChangedSignal("Text"):Connect(function()
 	if searchBar.Text ~= "" then
-		for _, savedCharacterFrame: Frame in pairs(npcsList:GetChildren()) do
+		for _, savedCharacterFrame in pairs(npcsList:GetChildren()) do
 			if savedCharacterFrame:IsA("Frame") then
 				savedCharacterFrame.Visible = false
 			end
@@ -205,7 +218,7 @@ searchBar:GetPropertyChangedSignal("Text"):Connect(function()
 		local search = searchBar.Text:lower()
 	
 		-- Score results:
-		for _, savedCharacterFrame: Frame in ipairs(npcsList:GetChildren()) do
+		for _, savedCharacterFrame in ipairs(npcsList:GetChildren()) do
 			if savedCharacterFrame:IsA("Frame") then
 				local lowerCharacterName = string.lower(savedCharacterFrame.Name)
 	
@@ -228,14 +241,14 @@ searchBar:GetPropertyChangedSignal("Text"):Connect(function()
 	
 		-- Display results:
 		for _, result in ipairs(results) do
-			local frameFound: Frame = result[3]
+			local frameFound = result[3]
 
 			if not frameFound and not frameFound:IsA("Frame") then continue end
 
 			frameFound.Visible = true
 		end
 	else
-		for _, savedCharacterFrame: Frame in pairs(npcsList:GetChildren()) do
+		for _, savedCharacterFrame in pairs(npcsList:GetChildren()) do
 			if savedCharacterFrame:IsA("Frame") then
 				savedCharacterFrame.Visible = true
 			end
